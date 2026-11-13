@@ -46,3 +46,35 @@ def generate_ai_character(params: Dict[str, Any]):
     theme = params.get("theme", "")
     profile = ai_service.generate_character(genre, role, theme)
     return {"character": profile}
+
+@router.get("/api/stories/{story_id}/board")
+def get_story_board(story_id: str):
+    board = db_service.get_board(story_id)
+    if not board:
+        return {"story_id": story_id, "positions": {}, "connections": []}
+    return board
+
+@router.put("/api/stories/{story_id}/board")
+def update_story_board(story_id: str, board_data: Dict[str, Any]):
+    return db_service.save_board(story_id, board_data)
+
+@router.get("/api/stories/{story_id}/culprit")
+def get_story_culprit(story_id: str):
+    culprit = db_service.get_culprit(story_id)
+    if not culprit:
+        return {"story_id": story_id, "culprit_id": None}
+    return culprit
+
+@router.put("/api/stories/{story_id}/culprit")
+def set_story_culprit(story_id: str, data: Dict[str, Any]):
+    culprit_id = data.get("culprit_id")
+    if culprit_id:
+        char = db_service.get_character(culprit_id)
+        if not char:
+            raise HTTPException(status_code=404, detail="Character not found")
+    return db_service.save_culprit(story_id, {"culprit_id": culprit_id})
+
+@router.delete("/api/stories/{story_id}/culprit")
+def remove_story_culprit(story_id: str):
+    db_service.delete_culprit(story_id)
+    return {"success": True, "story_id": story_id}

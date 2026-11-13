@@ -20,7 +20,7 @@ import {
 import { Chapter, Character, TimelineEvent, Memory, PlotHole } from '../types';
 
 interface HomeDeskProps {
-  onNavigate: (tab: NavTab) => void;
+  onNavigate: (tab: NavTab, characterId?: string) => void;
 }
 
 export const HomeDesk: React.FC<HomeDeskProps> = ({ onNavigate }) => {
@@ -503,7 +503,7 @@ export const HomeDesk: React.FC<HomeDeskProps> = ({ onNavigate }) => {
               {characters.slice(0, 3).map((char) => (
                 <div
                   key={char.id}
-                  onClick={() => onNavigate('characters')}
+                  onClick={() => onNavigate('characters', char.id)}
                   className="p-3.5 rounded-xl bg-[#201914] hover:bg-[#28201A] border border-[#352A20] hover:border-[#4B3C2E] cursor-pointer transition-all flex items-center space-x-3.5 group shadow-sm"
                 >
                   <div className="w-11 h-11 rounded-lg overflow-hidden shrink-0 bg-[#16120F] border border-black/40 shadow-inner">

@@ -73,6 +73,7 @@ export interface Character {
   name: string;
   alias?: string;
   age?: string;
+  gender?: string;
   role: string; // Protagonist, Antagonist, Foil, Companion, Mentor, etc.
   personality_traits: string[];
   backstory?: string;
@@ -86,6 +87,7 @@ export interface Character {
   first_appearance?: string;
   last_appearance?: string;
   portrait_url?: string;
+  character_arc?: string;
   created_at?: string;
   updated_at?: string;
 }

@@ -241,10 +241,18 @@ class ApiService {
   }
 
   async getCharacter(charId: string): Promise<Character> {
+    if (!charId) {
+      throw new Error('Character ID is required');
+    }
     try {
       return await this.request<Character>(`/api/characters/${charId}`);
-    } catch {
-      return (localStore.characters || {})[charId] as Character;
+    } catch (networkErr: any) {
+      const localChars = localStore.characters || {};
+      const found = localChars[charId] || Object.values(localChars).find((c: any) => c && c.id === charId);
+      if (found) {
+        return found as Character;
+      }
+      throw new Error(networkErr?.message || `Character dossier not found for ID: ${charId}`);
     }
   }
 
@@ -319,6 +327,99 @@ class ApiService {
           physical_description: "Tall with a graying trench coat, keen observant amber eyes, and a scarred left cheek."
         }
       };
+    }
+  }
+
+  // Culprit Persistence
+  async getStoryCulprit(storyId: string): Promise<{ story_id: string; culprit_id: string | null }> {
+    try {
+      return await this.request<{ story_id: string; culprit_id: string | null }>(`/api/stories/${storyId}/culprit`);
+    } catch {
+      // Fallback to localStorage
+      try {
+        const raw = localStorage.getItem(`storyweave_culprits_${storyId}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          // Support legacy array format (old multi-culprit) — take first
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return { story_id: storyId, culprit_id: parsed[0] };
+          }
+          if (typeof parsed === 'string') {
+            return { story_id: storyId, culprit_id: parsed };
+          }
+          if (parsed && typeof parsed.culprit_id === 'string') {
+            return { story_id: storyId, culprit_id: parsed.culprit_id };
+          }
+        }
+      } catch {}
+      return { story_id: storyId, culprit_id: null };
+    }
+  }
+
+  async setStoryCulprit(storyId: string, culpritId: string | null): Promise<{ story_id: string; culprit_id: string | null }> {
+    // Save to localStorage immediately for zero-lag
+    try {
+      if (culpritId) {
+        localStorage.setItem(`storyweave_culprits_${storyId}`, JSON.stringify({ culprit_id: culpritId }));
+      } else {
+        localStorage.removeItem(`storyweave_culprits_${storyId}`);
+      }
+    } catch {}
+
+    try {
+      if (culpritId) {
+        return await this.request<{ story_id: string; culprit_id: string | null }>(`/api/stories/${storyId}/culprit`, {
+          method: 'PUT',
+          body: JSON.stringify({ culprit_id: culpritId }),
+        });
+      } else {
+        await this.request<{ success: boolean }>(`/api/stories/${storyId}/culprit`, {
+          method: 'DELETE',
+        });
+        return { story_id: storyId, culprit_id: null };
+      }
+    } catch {
+      return { story_id: storyId, culprit_id: culpritId };
+    }
+  }
+
+  // Character Board Layout & Connections Persistence
+  async getStoryBoard(storyId: string): Promise<{ story_id: string; positions: Record<string, { x: number; y: number }>; connections: any[]; updated_at?: string }> {
+    try {
+      return await this.request<{ story_id: string; positions: Record<string, { x: number; y: number }>; connections: any[]; updated_at?: string }>(`/api/stories/${storyId}/board`);
+    } catch {
+      const saved = localStorage.getItem(`storyweave_char_board_${storyId}`);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            story_id: storyId,
+            positions: (parsed && typeof parsed.positions === 'object' && !Array.isArray(parsed.positions)) ? parsed.positions : {},
+            connections: (parsed && Array.isArray(parsed.connections)) ? parsed.connections : [],
+            updated_at: parsed?.updatedAt
+          };
+        } catch {}
+      }
+      return { story_id: storyId, positions: {}, connections: [] };
+    }
+  }
+
+  async saveStoryBoard(storyId: string, boardData: { positions: Record<string, { x: number; y: number }>; connections: any[] }): Promise<{ story_id: string; positions: Record<string, { x: number; y: number }>; connections: any[]; updated_at?: string }> {
+    try {
+      return await this.request<{ story_id: string; positions: Record<string, { x: number; y: number }>; connections: any[]; updated_at?: string }>(`/api/stories/${storyId}/board`, {
+        method: 'PUT',
+        body: JSON.stringify(boardData),
+      });
+    } catch {
+      // Graceful local persistence fallback
+      try {
+        localStorage.setItem(`storyweave_char_board_${storyId}`, JSON.stringify({
+          positions: boardData.positions,
+          connections: boardData.connections,
+          updatedAt: new Date().toISOString()
+        }));
+      } catch {}
+      return { story_id: storyId, ...boardData, updated_at: new Date().toISOString() };
     }
   }
 

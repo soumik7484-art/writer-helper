@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { AnimatePresence } from 'framer-motion';
+import { CharacterDetailsModal } from '../components/character/CharacterDetailsModal';
 import { useStory } from '../context/StoryContext';
 import { api } from '../services/api';
 import { Character } from '../types';
@@ -119,7 +120,85 @@ class DossierErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 }
 
-export const CharacterArchive: React.FC = () => {
+interface BoardCanvasErrorBoundaryProps {
+  children: React.ReactNode;
+  onResetLayout?: () => void;
+}
+
+interface BoardCanvasErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class BoardCanvasErrorBoundary extends React.Component<BoardCanvasErrorBoundaryProps, BoardCanvasErrorBoundaryState> {
+  constructor(props: BoardCanvasErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): BoardCanvasErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("Board canvas caught unexpected layout condition:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="relative w-full min-h-[560px] h-[72vh] rounded-2xl border-2 border-[#8C6F48] bg-[#1C1713] p-8 flex flex-col items-center justify-center text-center space-y-4 shadow-2xl">
+          <div className="w-14 h-14 rounded-full bg-[#C49A61]/20 border border-[#C49A61]/40 flex items-center justify-center text-[#C49A61] mb-2">
+            <Users className="w-7 h-7" />
+          </div>
+          <span className="font-typewriter text-xs text-[#C49A61] font-bold tracking-[0.2em] uppercase">
+            EVIDENCE STAGE STABILIZED
+          </span>
+          <h3 className="font-serif text-2xl font-bold text-[#F2E8DC]">
+            Investigative Canvas Recovered
+          </h3>
+          <p className="font-typewriter text-xs text-[#A69482] max-w-md leading-relaxed">
+            A coordinate misalignment occurred during character movement. Your case dossiers and archival records remain safe in storage.
+          </p>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ hasError: false });
+                if (this.props.onResetLayout) {
+                  this.props.onResetLayout();
+                }
+              }}
+              className="px-4 py-2 rounded-lg bg-[#C49A61] hover:bg-[#D6AB72] text-[#14100D] font-typewriter text-xs uppercase font-bold tracking-wider transition-all shadow"
+            >
+              Realign Suspect Grid
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ hasError: false });
+              }}
+              className="px-4 py-2 rounded-lg bg-[#2B2016] text-[#E0B77D] hover:bg-[#3D2E20] border border-[#8C6F48]/50 font-typewriter text-xs uppercase font-bold transition-all shadow"
+            >
+              Resume Stage
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export interface CharacterArchiveProps {
+  initialCharacterId?: string | null;
+  onSelectCharacterId?: (id: string | null) => void;
+}
+
+export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
+  initialCharacterId,
+  onSelectCharacterId
+}) => {
   const { activeStory, addToast } = useStory();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [loading, setLoading] = useState(false);
@@ -129,8 +208,120 @@ export const CharacterArchive: React.FC = () => {
   const [connections, setConnections] = useState<BoardConnection[]>([]);
   const [viewMode, setViewMode] = useState<'board' | 'roster'>('board');
 
-  // Dedicated Character Dossier Modal Overlay (opened when clicking a portrait)
-  const [selectedDossierChar, setSelectedDossierChar] = useState<Character | null>(null);
+  // Dedicated Character Dossier Selection (identified by unique, consistent ID)
+  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(initialCharacterId || null);
+
+  // Single culprit tracking state
+  const [culpritId, setCulpritId] = useState<string | null>(null);
+  const [culpritAnimKey, setCulpritAnimKey] = useState<number>(0);
+  const [showCulpritConfirm, setShowCulpritConfirm] = useState<{ newId: string; oldId: string | null } | null>(null);
+
+  // Load culprit from backend / localStorage when activeStory changes
+  useEffect(() => {
+    if (!activeStory) return;
+    let cancelled = false;
+    api.getStoryCulprit(activeStory.id).then(result => {
+      if (!cancelled && result) {
+        setCulpritId(result.culprit_id || null);
+        if (result.culprit_id) setCulpritAnimKey(prev => prev + 1);
+      }
+    }).catch(() => {
+      // Fallback: try legacy localStorage format
+      try {
+        const raw = localStorage.getItem(`storyweave_culprits_${activeStory.id}`);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            if (!cancelled) { setCulpritId(parsed[0]); setCulpritAnimKey(prev => prev + 1); }
+          } else if (parsed && typeof parsed.culprit_id === 'string') {
+            if (!cancelled) { setCulpritId(parsed.culprit_id); setCulpritAnimKey(prev => prev + 1); }
+          }
+        }
+      } catch {}
+    });
+    return () => { cancelled = true; };
+  }, [activeStory?.id]);
+
+  // Persist culprit to backend + localStorage
+  const persistCulprit = useCallback((newCulpritId: string | null) => {
+    if (!activeStory) return;
+    api.setStoryCulprit(activeStory.id, newCulpritId).catch(() => {
+      // localStorage fallback already handled inside api.setStoryCulprit
+    });
+  }, [activeStory?.id]);
+
+  const handleMarkAsCulprit = useCallback((charId: string) => {
+    const charName = characters.find(c => c && c.id === charId)?.name || 'Suspect';
+    if (culpritId && culpritId !== charId) {
+      // Ask confirmation before replacing
+      setShowCulpritConfirm({ newId: charId, oldId: culpritId });
+      return;
+    }
+    if (culpritId === charId) {
+      // Already the culprit — do nothing (use Remove Culprit)
+      return;
+    }
+    setCulpritId(charId);
+    setCulpritAnimKey(prev => prev + 1);
+    persistCulprit(charId);
+    sound.playTypewriterKeystroke();
+    addToast("Culprit Identified", `${charName} marked as culprit on evidence board.`, "error");
+  }, [culpritId, characters, addToast, persistCulprit]);
+
+  const handleConfirmReplaceCulprit = useCallback(() => {
+    if (!showCulpritConfirm) return;
+    const { newId } = showCulpritConfirm;
+    const charName = characters.find(c => c && c.id === newId)?.name || 'Suspect';
+    setCulpritId(newId);
+    setCulpritAnimKey(prev => prev + 1);
+    persistCulprit(newId);
+    sound.playTypewriterKeystroke();
+    addToast("Culprit Replaced", `${charName} is now marked as the culprit.`, "error");
+    setShowCulpritConfirm(null);
+  }, [showCulpritConfirm, characters, addToast, persistCulprit]);
+
+  const handleRemoveCulprit = useCallback((charId: string) => {
+    if (culpritId !== charId) return;
+    const charName = characters.find(c => c && c.id === charId)?.name || 'Suspect';
+    setCulpritId(null);
+    persistCulprit(null);
+    sound.playPaperRustle();
+    addToast("Culprit Status Removed", `${charName} mark cleared from evidence board.`, "info");
+  }, [culpritId, characters, addToast, persistCulprit]);
+
+  const handleToggleCulprit = useCallback((charId: string) => {
+    if (culpritId === charId) {
+      handleRemoveCulprit(charId);
+    } else {
+      handleMarkAsCulprit(charId);
+    }
+  }, [culpritId, handleMarkAsCulprit, handleRemoveCulprit]);
+
+  const handleSetCulprit = useCallback((charId: string, makeCulprit: boolean) => {
+    if (makeCulprit) {
+      handleMarkAsCulprit(charId);
+    } else {
+      handleRemoveCulprit(charId);
+    }
+  }, [handleMarkAsCulprit, handleRemoveCulprit]);
+
+  useEffect(() => {
+    if (initialCharacterId !== undefined) {
+      setSelectedCharacterId(initialCharacterId);
+    }
+  }, [initialCharacterId]);
+
+  useEffect(() => {
+    if (!selectedCharacterId) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlCharId = params.get('characterId');
+        if (urlCharId) {
+          setSelectedCharacterId(urlCharId);
+        }
+      } catch {}
+    }
+  }, []);
 
   // Red Thread Connection Flow
   const [connectingSourceId, setConnectingSourceId] = useState<string | null>(null);
@@ -154,26 +345,66 @@ export const CharacterArchive: React.FC = () => {
   // Fullscreen / Expanded board toggle
   const [isBoardExpanded, setIsBoardExpanded] = useState(false);
 
-  // Dragging state tracking
+  // Dragging & synchronization state tracking
   const boardRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     id: string;
+    pointerId: number;
     startX: number;
     startY: number;
     initialX: number;
     initialY: number;
   } | null>(null);
+  const hasDraggedDistanceRef = useRef(false);
   const isDraggingRef = useRef(false);
+  const [draggingCharId, setDraggingCharId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'offline'>('idle');
+
+  // Stable references for state to eliminate stale closures
+  const latestPositionsRef = useRef<Record<string, Position>>({});
+  const connectionsRef = useRef<BoardConnection[]>([]);
+
+  useEffect(() => {
+    latestPositionsRef.current = positions;
+  }, [positions]);
+
+  useEffect(() => {
+    connectionsRef.current = connections;
+  }, [connections]);
 
   const storageKey = activeStory ? `storyweave_char_board_${activeStory.id}` : null;
+
+  // Safe helper to sanitize positions
+  const sanitizePositionMap = useCallback((raw: any): Record<string, Position> => {
+    const result: Record<string, Position> = {};
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return result;
+    for (const [id, pos] of Object.entries(raw)) {
+      if (
+        id &&
+        pos &&
+        typeof pos === 'object' &&
+        typeof (pos as any).x === 'number' &&
+        Number.isFinite((pos as any).x) &&
+        typeof (pos as any).y === 'number' &&
+        Number.isFinite((pos as any).y)
+      ) {
+        result[id] = {
+          x: Math.round((pos as any).x),
+          y: Math.round((pos as any).y)
+        };
+      }
+    }
+    return result;
+  }, []);
 
   // Global Escape Key Listener for Modals
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (selectedDossierChar) {
-          setSelectedDossierChar(null);
+        if (selectedCharacterId) {
+          handleCloseDossier();
         }
+        setShowCulpritConfirm(null);
         setNewConnModal(null);
         setEditingConnection(null);
         setModalOpen(false);
@@ -182,7 +413,7 @@ export const CharacterArchive: React.FC = () => {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedDossierChar]);
+  }, [selectedCharacterId]);
 
   // 1. Fetch Characters from API
   const fetchCharacters = useCallback(async () => {
@@ -203,18 +434,21 @@ export const CharacterArchive: React.FC = () => {
     fetchCharacters();
   }, [fetchCharacters]);
 
-  // 2. Load / Reconcile Positions and Connections from Storage
+  // 2. Load / Reconcile Positions and Connections from Storage & Backend API
   useEffect(() => {
     if (!activeStory || characters.length === 0) return;
 
-    let savedData: { positions?: Record<string, Position>; connections?: BoardConnection[] } = {};
+    let isMounted = true;
+
+    // Phase A: Immediate load from localStorage for instant, zero-flicker render
+    let localSaved: { positions?: Record<string, Position>; connections?: BoardConnection[] } = {};
     if (storageKey) {
       try {
         const raw = localStorage.getItem(storageKey);
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
-            savedData = parsed;
+            localSaved = parsed;
           }
         }
       } catch (e) {
@@ -222,31 +456,29 @@ export const CharacterArchive: React.FC = () => {
       }
     }
 
-    // A. Reconcile Positions
-    const currentPositions: Record<string, Position> = (savedData && typeof savedData.positions === 'object' && !Array.isArray(savedData.positions)) ? savedData.positions : {};
-    const newPositions: Record<string, Position> = { ...currentPositions };
-
+    const initialPositions = sanitizePositionMap(localSaved.positions);
     const boardWidth = boardRef.current ? boardRef.current.clientWidth : 1000;
     const cols = Math.max(2, Math.floor((boardWidth - 80) / (CARD_W + 45)));
 
     characters.forEach((char, idx) => {
       if (!char || !char.id) return;
-      if (!newPositions[char.id]) {
+      if (!initialPositions[char.id]) {
         const col = idx % cols;
         const row = Math.floor(idx / cols);
-        newPositions[char.id] = {
+        initialPositions[char.id] = {
           x: 40 + col * (CARD_W + 50) + (row % 2 === 1 ? 25 : 0),
           y: 40 + row * (CARD_H + 45),
         };
       }
     });
 
-    setPositions(newPositions);
+    latestPositionsRef.current = initialPositions;
+    setPositions(initialPositions);
 
-    // B. Reconcile Connections with Strict Sanitization
+    // Reconcile Connections with Strict Sanitization
     let activeConnections: BoardConnection[] = [];
-    if (savedData && savedData.connections && Array.isArray(savedData.connections)) {
-      activeConnections = savedData.connections.filter(conn =>
+    if (localSaved && localSaved.connections && Array.isArray(localSaved.connections)) {
+      activeConnections = localSaved.connections.filter(conn =>
         conn &&
         typeof conn === 'object' &&
         typeof conn.sourceId === 'string' &&
@@ -298,22 +530,99 @@ export const CharacterArchive: React.FC = () => {
       activeConnections = seeded;
     }
 
+    connectionsRef.current = activeConnections;
     setConnections(activeConnections);
-  }, [characters, activeStory, storageKey]);
 
-  // 3. Persist State to LocalStorage
-  const persistBoard = useCallback((newPos: Record<string, Position>, newConns: BoardConnection[]) => {
-    if (!storageKey) return;
-    try {
-      localStorage.setItem(storageKey, JSON.stringify({
-        positions: newPos,
-        connections: newConns,
-        updatedAt: new Date().toISOString()
-      }));
-    } catch (e) {
-      console.error("Failed to persist board layout to localStorage", e);
+    // Phase B: Asynchronous sync from Backend API
+    api.getStoryBoard(activeStory.id).then(backendData => {
+      if (!isMounted || !backendData) return;
+      const backendPositions = sanitizePositionMap(backendData.positions);
+      if (Object.keys(backendPositions).length > 0) {
+        const mergedPositions = { ...initialPositions, ...backendPositions };
+        characters.forEach((char, idx) => {
+          if (!char || !char.id) return;
+          if (!mergedPositions[char.id]) {
+            const col = idx % cols;
+            const row = Math.floor(idx / cols);
+            mergedPositions[char.id] = {
+              x: 40 + col * (CARD_W + 50) + (row % 2 === 1 ? 25 : 0),
+              y: 40 + row * (CARD_H + 45),
+            };
+          }
+        });
+        latestPositionsRef.current = mergedPositions;
+        setPositions(mergedPositions);
+      }
+
+      if (Array.isArray(backendData.connections) && backendData.connections.length > 0) {
+        const validBackendConns = backendData.connections.filter(conn =>
+          conn &&
+          typeof conn === 'object' &&
+          typeof conn.sourceId === 'string' &&
+          typeof conn.targetId === 'string' &&
+          characters.some(c => c && c.id === conn.sourceId) &&
+          characters.some(c => c && c.id === conn.targetId)
+        ).map((conn, idx) => ({
+          id: String(conn.id || `conn_${conn.sourceId}_${conn.targetId}_${idx}`),
+          sourceId: String(conn.sourceId),
+          targetId: String(conn.targetId),
+          label: typeof conn.label === 'string'
+            ? conn.label
+            : (conn.label && typeof conn.label === 'object' ? ((conn.label as any).label || 'Connected') : 'Connected'),
+          type: typeof conn.type === 'string' ? conn.type : 'custom',
+          notes: typeof conn.notes === 'string' ? conn.notes : ''
+        }));
+
+        if (validBackendConns.length > 0) {
+          connectionsRef.current = validBackendConns;
+          setConnections(validBackendConns);
+        }
+      }
+    }).catch(err => {
+      console.warn("Backend board load note: using local cache", err);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [characters, activeStory, storageKey, sanitizePositionMap]);
+
+  // 3. Persist State to LocalStorage and Backend API (Optimistic & Resilient)
+  const persistBoard = useCallback(async (newPos: Record<string, Position>, newConns: BoardConnection[]) => {
+    if (!activeStory) return;
+
+    // A. LocalStorage update (synchronous, 0ms lag)
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({
+          positions: newPos,
+          connections: newConns,
+          updatedAt: new Date().toISOString()
+        }));
+      } catch (e) {
+        console.error("Failed to persist board layout to localStorage", e);
+      }
     }
-  }, [storageKey]);
+
+    // B. Backend API update
+    try {
+      setSyncStatus('saving');
+      await api.saveStoryBoard(activeStory.id, {
+        positions: newPos,
+        connections: newConns
+      });
+      setSyncStatus('saved');
+      setTimeout(() => {
+        setSyncStatus(prev => prev === 'saved' ? 'idle' : prev);
+      }, 2000);
+    } catch (e) {
+      console.warn("Backend board sync note: saved in local cache", e);
+      setSyncStatus('offline');
+      setTimeout(() => {
+        setSyncStatus(prev => prev === 'offline' ? 'idle' : prev);
+      }, 3500);
+    }
+  }, [activeStory, storageKey]);
 
   // 4. Auto-Arrange / Reset Board Layout
   const handleAutoArrange = () => {
@@ -329,8 +638,9 @@ export const CharacterArchive: React.FC = () => {
         y: 40 + row * (CARD_H + 45),
       };
     });
+    latestPositionsRef.current = freshPositions;
     setPositions(freshPositions);
-    persistBoard(freshPositions, connections);
+    persistBoard(freshPositions, connectionsRef.current);
     sound.playPaperRustle();
     addToast("Board Rearranged", "Portraits organized into investigative matrix.", "info");
   };
@@ -347,15 +657,100 @@ export const CharacterArchive: React.FC = () => {
       return;
     }
 
-    const currentPos = positions[charId] || { x: 50, y: 50 };
+    if (e.button !== 0) return; // Only primary mouse button
+    e.preventDefault();
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {}
+
+    const currentPos = latestPositionsRef.current[charId] || positions[charId] || { x: 40, y: 40 };
     dragRef.current = {
       id: charId,
+      pointerId: e.pointerId,
       startX: e.clientX,
       startY: e.clientY,
-      initialX: currentPos.x,
-      initialY: currentPos.y
+      initialX: Number.isFinite(currentPos.x) ? currentPos.x : 40,
+      initialY: Number.isFinite(currentPos.y) ? currentPos.y : 40
     };
+    hasDraggedDistanceRef.current = false;
     isDraggingRef.current = false;
+  };
+
+  const handleCardPointerMove = (e: React.PointerEvent, charId: string) => {
+    if (connectingSourceId && boardRef.current) {
+      const rect = boardRef.current.getBoundingClientRect();
+      setMousePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      });
+      return;
+    }
+
+    const currentDrag = dragRef.current;
+    if (!currentDrag || currentDrag.id !== charId) return;
+
+    const dx = e.clientX - currentDrag.startX;
+    const dy = e.clientY - currentDrag.startY;
+
+    if (!hasDraggedDistanceRef.current) {
+      if (Math.hypot(dx, dy) > 4) {
+        hasDraggedDistanceRef.current = true;
+        isDraggingRef.current = true;
+        setDraggingCharId(charId);
+      } else {
+        return;
+      }
+    }
+
+    if (!boardRef.current) return;
+    const rect = boardRef.current.getBoundingClientRect();
+    const maxX = Math.max(10, rect.width - CARD_W - 10);
+    const maxY = Math.max(10, rect.height - CARD_H - 10);
+
+    const nextX = Math.max(10, Math.min(maxX, Math.round(currentDrag.initialX + dx)));
+    const nextY = Math.max(10, Math.min(maxY, Math.round(currentDrag.initialY + dy)));
+
+    latestPositionsRef.current[charId] = { x: nextX, y: nextY };
+    setPositions(prev => ({
+      ...prev,
+      [charId]: { x: nextX, y: nextY }
+    }));
+  };
+
+  const handleCardPointerUp = (e: React.PointerEvent, charId: string) => {
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+
+    const wasDragging = hasDraggedDistanceRef.current;
+    const activeDrag = dragRef.current;
+
+    dragRef.current = null;
+    setDraggingCharId(null);
+
+    if (wasDragging && activeDrag && activeDrag.id === charId) {
+      sound.playPaperRustle();
+      const updatedPositions = { ...latestPositionsRef.current };
+      persistBoard(updatedPositions, connectionsRef.current);
+    }
+
+    setTimeout(() => {
+      hasDraggedDistanceRef.current = false;
+      isDraggingRef.current = false;
+    }, 60);
+  };
+
+  const handleCardPointerCancel = (e: React.PointerEvent, charId: string) => {
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    dragRef.current = null;
+    setDraggingCharId(null);
+    setTimeout(() => {
+      hasDraggedDistanceRef.current = false;
+      isDraggingRef.current = false;
+    }, 60);
   };
 
   const handleBoardPointerMove = (e: React.PointerEvent) => {
@@ -367,58 +762,96 @@ export const CharacterArchive: React.FC = () => {
       });
     }
 
-    if (!dragRef.current || !boardRef.current) return;
+    const currentDrag = dragRef.current;
+    if (!currentDrag || !boardRef.current) return;
 
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
+    const charId = currentDrag.id;
+    const dx = e.clientX - currentDrag.startX;
+    const dy = e.clientY - currentDrag.startY;
 
-    if (Math.hypot(dx, dy) > 8) {
-      isDraggingRef.current = true;
+    if (!hasDraggedDistanceRef.current) {
+      if (Math.hypot(dx, dy) > 4) {
+        hasDraggedDistanceRef.current = true;
+        isDraggingRef.current = true;
+        setDraggingCharId(charId);
+      } else {
+        return;
+      }
     }
 
-    if (isDraggingRef.current) {
-      const rect = boardRef.current.getBoundingClientRect();
-      const maxX = Math.max(10, rect.width - CARD_W - 10);
-      const maxY = Math.max(10, rect.height - CARD_H - 10);
+    const rect = boardRef.current.getBoundingClientRect();
+    const maxX = Math.max(10, rect.width - CARD_W - 10);
+    const maxY = Math.max(10, rect.height - CARD_H - 10);
 
-      const nextX = Math.max(10, Math.min(maxX, dragRef.current.initialX + dx));
-      const nextY = Math.max(10, Math.min(maxY, dragRef.current.initialY + dy));
+    const nextX = Math.max(10, Math.min(maxX, Math.round(currentDrag.initialX + dx)));
+    const nextY = Math.max(10, Math.min(maxY, Math.round(currentDrag.initialY + dy)));
 
-      setPositions(prev => ({
-        ...prev,
-        [dragRef.current!.id]: { x: nextX, y: nextY }
-      }));
-    }
+    latestPositionsRef.current[charId] = { x: nextX, y: nextY };
+    setPositions(prev => ({
+      ...prev,
+      [charId]: { x: nextX, y: nextY }
+    }));
   };
 
   const handleBoardPointerUp = () => {
-    if (dragRef.current) {
-      if (isDraggingRef.current) {
-        persistBoard(positions, connections);
-      }
-      dragRef.current = null;
-      setTimeout(() => {
-        isDraggingRef.current = false;
-      }, 50);
+    const wasDragging = hasDraggedDistanceRef.current;
+    const activeDrag = dragRef.current;
+
+    dragRef.current = null;
+    setDraggingCharId(null);
+
+    if (wasDragging && activeDrag) {
+      sound.playPaperRustle();
+      const updatedPositions = { ...latestPositionsRef.current };
+      persistBoard(updatedPositions, connectionsRef.current);
     }
+
+    setTimeout(() => {
+      hasDraggedDistanceRef.current = false;
+      isDraggingRef.current = false;
+    }, 60);
   };
 
-  const handleCardClick = (char: Character, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isDraggingRef.current) return;
+  const handleCardClick = (charId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (hasDraggedDistanceRef.current || isDraggingRef.current) return;
 
     if (connectingSourceId) {
-      if (connectingSourceId === char.id) {
+      if (connectingSourceId === charId) {
         setConnectingSourceId(null);
         setMousePos(null);
       } else {
-        handleCompleteConnection(char.id);
+        handleCompleteConnection(charId);
       }
       return;
     }
 
     sound.playPaperRustle();
-    setSelectedDossierChar(char);
+    setSelectedCharacterId(charId);
+    if (onSelectCharacterId) {
+      onSelectCharacterId(charId);
+    } else {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', 'characters');
+        url.searchParams.set('characterId', charId);
+        window.history.pushState({}, '', url.toString());
+      } catch {}
+    }
+  };
+
+  const handleCloseDossier = () => {
+    sound.playPaperRustle();
+    setSelectedCharacterId(null);
+    if (onSelectCharacterId) {
+      onSelectCharacterId(null);
+    } else {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('characterId');
+        window.history.pushState({}, '', url.toString());
+      } catch {}
+    }
   };
 
   // 6. Red Thread Connection Lifecycle
@@ -480,8 +913,9 @@ export const CharacterArchive: React.FC = () => {
     };
 
     const next = [...connections, newConnection];
+    connectionsRef.current = next;
     setConnections(next);
-    persistBoard(positions, next);
+    persistBoard(latestPositionsRef.current, next);
     sound.playTypewriterKeystroke();
     addToast("Thread Pinned", `Bound with red thread: ${finalLabel}`, "success");
     setNewConnModal(null);
@@ -489,8 +923,9 @@ export const CharacterArchive: React.FC = () => {
 
   const handleDeleteConnection = (connId: string) => {
     const nextConns = connections.filter(c => c && c.id !== connId);
+    connectionsRef.current = nextConns;
     setConnections(nextConns);
-    persistBoard(positions, nextConns);
+    persistBoard(latestPositionsRef.current, nextConns);
     sound.playPaperRustle();
     addToast("Thread Severed", "Relationship link removed from evidence board.", "info");
     setEditingConnection(null);
@@ -499,8 +934,9 @@ export const CharacterArchive: React.FC = () => {
   const handleUpdateConnection = () => {
     if (!editingConnection) return;
     const nextConns = connections.map(c => (c && c.id === editingConnection.id ? editingConnection : c));
+    connectionsRef.current = nextConns;
     setConnections(nextConns);
-    persistBoard(positions, nextConns);
+    persistBoard(latestPositionsRef.current, nextConns);
     sound.playTypewriterKeystroke();
     addToast("Relationship Revised", "Evidence thread updated.", "success");
     setEditingConnection(null);
@@ -582,9 +1018,7 @@ export const CharacterArchive: React.FC = () => {
       if (charData.id) {
         await api.updateCharacter(charData.id, charData);
         addToast("Dossier Updated", `Case file for ${charData.name} updated.`, "success");
-        if (selectedDossierChar?.id === charData.id) {
-          setSelectedDossierChar({ ...selectedDossierChar, ...charData } as Character);
-        }
+        // State refreshed via fetchCharacters
       } else {
         const created = await api.createCharacter(activeStory.id, charData);
         const curCount = characters.length;
@@ -626,8 +1060,8 @@ export const CharacterArchive: React.FC = () => {
       setConnections(nextConns);
       persistBoard(nextPos, nextConns);
 
-      if (selectedDossierChar?.id === charId) {
-        setSelectedDossierChar(null);
+      if (selectedCharacterId === charId) {
+        handleCloseDossier();
       }
 
       addToast("Record Expunged", `Dossier for ${charName || 'suspect'} purged from archives.`, "info");
@@ -801,38 +1235,67 @@ export const CharacterArchive: React.FC = () => {
 
         {/* Interactive Relationship Board Canvas */}
         {viewMode === 'board' ? (
-          <div
-            ref={boardRef}
-            onPointerMove={handleBoardPointerMove}
-            onPointerUp={handleBoardPointerUp}
-            className={`relative w-full rounded-2xl border-2 border-[#8C6F48] overflow-hidden select-none transition-all shadow-2xl ${
-              isBoardExpanded ? 'min-h-[820px] h-[86vh]' : 'min-h-[640px] h-[72vh]'
-            }`}
-            style={{
-              backgroundColor: '#A88D65',
-              backgroundImage: `url(${boardTextureBase64})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
-            }}
-          >
-            <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_80px_rgba(40,25,12,0.6)] z-0"></div>
-            
-            {/* Board Stats & Expand Toggle */}
-            <div className="absolute top-3 right-3 z-30 flex items-center space-x-2 bg-[#1C1612]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[#382E24] shadow-md text-xs font-typewriter text-[#C49A61]">
-              <span>{characters.length} Suspects Pinned</span>
-              <span>•</span>
-              <span className="text-[#E5A8A3]">{connections.length} Red Threads</span>
-              <button
-                onClick={() => setIsBoardExpanded(!isBoardExpanded)}
-                className="ml-1 text-[#A69482] hover:text-white p-0.5 transition-colors"
-                title={isBoardExpanded ? "Collapse board" : "Expand board view"}
-              >
-                {isBoardExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-              </button>
-            </div>
+          <BoardCanvasErrorBoundary onResetLayout={handleAutoArrange}>
+            <div
+              ref={boardRef}
+              onPointerMove={handleBoardPointerMove}
+              onPointerUp={handleBoardPointerUp}
+              onPointerCancel={handleBoardPointerUp}
+              className={`relative w-full rounded-2xl border-2 border-[#8C6F48] overflow-hidden select-none transition-all shadow-2xl ${
+                isBoardExpanded ? 'min-h-[820px] h-[86vh]' : 'min-h-[640px] h-[72vh]'
+              }`}
+              style={{
+                backgroundColor: '#A88D65',
+                backgroundImage: `url(${boardTextureBase64})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+              }}
+            >
+              <div className="pointer-events-none absolute inset-0 shadow-[inset_0_0_80px_rgba(40,25,12,0.6)] z-0"></div>
+              
+              {/* Board Stats & Expand Toggle */}
+              <div className="absolute top-3 right-3 z-30 flex items-center space-x-2.5 bg-[#1C1612]/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-[#382E24] shadow-md text-xs font-typewriter text-[#C49A61]">
+                {/* Sync status indicator */}
+                <div className="flex items-center space-x-1.5 pr-2 border-r border-[#382E24]">
+                  {syncStatus === 'saving' && (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      <span className="text-amber-300 text-[11px]">Syncing stage...</span>
+                    </>
+                  )}
+                  {syncStatus === 'saved' && (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-emerald-300 text-[11px]">Layout saved</span>
+                    </>
+                  )}
+                  {syncStatus === 'offline' && (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-slate-400" />
+                      <span className="text-[#A69482] text-[11px]">Saved locally</span>
+                    </>
+                  )}
+                  {syncStatus === 'idle' && (
+                    <>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500/70" />
+                      <span className="text-[#A69482] text-[11px]">Stage active</span>
+                    </>
+                  )}
+                </div>
+                <span>{characters.length} Suspects Pinned</span>
+                <span>•</span>
+                <span className="text-[#E5A8A3]">{connections.length} Red Threads</span>
+                <button
+                  onClick={() => setIsBoardExpanded(!isBoardExpanded)}
+                  className="ml-1 text-[#A69482] hover:text-white p-0.5 transition-colors"
+                  title={isBoardExpanded ? "Collapse board" : "Expand board view"}
+                >
+                  {isBoardExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
 
-            {/* SVG Red Connecting Threads */}
+              {/* SVG Red Connecting Threads */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-visible">
               <defs>
                 <filter id="threadShadow" x="-20%" y="-20%" width="140%" height="140%">
@@ -842,14 +1305,23 @@ export const CharacterArchive: React.FC = () => {
 
               {connections.map(conn => {
                 if (!conn || !conn.sourceId || !conn.targetId) return null;
-                const posA = positions[conn.sourceId];
-                const posB = positions[conn.targetId];
+                const posA = positions[conn.sourceId] || latestPositionsRef.current[conn.sourceId];
+                const posB = positions[conn.targetId] || latestPositionsRef.current[conn.targetId];
                 if (!posA || !posB) return null;
 
-                const x1 = posA.x + PIN_OFFSET_X;
-                const y1 = posA.y + PIN_OFFSET_Y;
-                const x2 = posB.x + PIN_OFFSET_X;
-                const y2 = posB.y + PIN_OFFSET_Y;
+                const rawX1 = posA.x;
+                const rawY1 = posA.y;
+                const rawX2 = posB.x;
+                const rawY2 = posB.y;
+
+                if (!Number.isFinite(rawX1) || !Number.isFinite(rawY1) || !Number.isFinite(rawX2) || !Number.isFinite(rawY2)) {
+                  return null;
+                }
+
+                const x1 = rawX1 + PIN_OFFSET_X;
+                const y1 = rawY1 + PIN_OFFSET_Y;
+                const x2 = rawX2 + PIN_OFFSET_X;
+                const y2 = rawY2 + PIN_OFFSET_Y;
 
                 const mx = (x1 + x2) / 2;
                 const my = (y1 + y2) / 2;
@@ -893,10 +1365,13 @@ export const CharacterArchive: React.FC = () => {
               })}
 
               {/* Rubberband thread during link mode */}
-              {connectingSourceId && mousePos && positions[connectingSourceId] && (
+              {connectingSourceId && mousePos && (
                 <g>
                   {(() => {
-                    const sourcePos = positions[connectingSourceId];
+                    const sourcePos = positions[connectingSourceId] || latestPositionsRef.current[connectingSourceId];
+                    if (!sourcePos || !Number.isFinite(sourcePos.x) || !Number.isFinite(sourcePos.y)) return null;
+                    if (!mousePos || !Number.isFinite(mousePos.x) || !Number.isFinite(mousePos.y)) return null;
+
                     const x1 = sourcePos.x + PIN_OFFSET_X;
                     const y1 = sourcePos.y + PIN_OFFSET_Y;
                     const x2 = mousePos.x;
@@ -931,14 +1406,23 @@ export const CharacterArchive: React.FC = () => {
             <div className="absolute inset-0 pointer-events-none z-20">
               {connections.map(conn => {
                 if (!conn || !conn.sourceId || !conn.targetId) return null;
-                const posA = positions[conn.sourceId];
-                const posB = positions[conn.targetId];
+                const posA = positions[conn.sourceId] || latestPositionsRef.current[conn.sourceId];
+                const posB = positions[conn.targetId] || latestPositionsRef.current[conn.targetId];
                 if (!posA || !posB) return null;
 
-                const x1 = posA.x + PIN_OFFSET_X;
-                const y1 = posA.y + PIN_OFFSET_Y;
-                const x2 = posB.x + PIN_OFFSET_X;
-                const y2 = posB.y + PIN_OFFSET_Y;
+                const rawX1 = posA.x;
+                const rawY1 = posA.y;
+                const rawX2 = posB.x;
+                const rawY2 = posB.y;
+
+                if (!Number.isFinite(rawX1) || !Number.isFinite(rawY1) || !Number.isFinite(rawX2) || !Number.isFinite(rawY2)) {
+                  return null;
+                }
+
+                const x1 = rawX1 + PIN_OFFSET_X;
+                const y1 = rawY1 + PIN_OFFSET_Y;
+                const x2 = rawX2 + PIN_OFFSET_X;
+                const y2 = rawY2 + PIN_OFFSET_Y;
 
                 const mx = (x1 + x2) / 2;
                 const my = (y1 + y2) / 2;
@@ -978,28 +1462,41 @@ export const CharacterArchive: React.FC = () => {
             <div className="absolute inset-0 z-20 pointer-events-none">
               {characters.map(char => {
                 if (!char || !char.id) return null;
-                const pos = positions[char.id] || { x: 40, y: 40 };
+                const pos = positions[char.id] || latestPositionsRef.current[char.id] || { x: 40, y: 40 };
+                const posX = Number.isFinite(pos?.x) ? pos.x : 40;
+                const posY = Number.isFinite(pos?.y) ? pos.y : 40;
                 const isSource = connectingSourceId === char.id;
                 const isValidTarget = connectingSourceId && connectingSourceId !== char.id;
+                const isCulprit = culpritId === char.id;
+                const isDraggingThis = draggingCharId === char.id;
 
                 return (
                   <div
                     key={char.id}
                     style={{
                       position: 'absolute',
-                      left: `${pos.x}px`,
-                      top: `${pos.y}px`,
+                      left: `${posX}px`,
+                      top: `${posY}px`,
                       width: `${CARD_W}px`,
-                      touchAction: 'none'
+                      touchAction: 'none',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      willChange: isDraggingThis ? 'transform, left, top' : 'auto',
+                      transition: isDraggingThis ? 'none' : 'box-shadow 0.15s ease, transform 0.15s ease',
                     }}
                     onPointerDown={(e) => handleCardPointerDown(e, char.id)}
-                    onClick={(e) => handleCardClick(char, e)}
-                    className={`pointer-events-auto cursor-pointer group transition-shadow ${
-                      isSource
-                        ? 'ring-4 ring-[#C0392B] ring-offset-2 ring-offset-[#14100D] scale-105 z-30'
+                    onPointerMove={(e) => handleCardPointerMove(e, char.id)}
+                    onPointerUp={(e) => handleCardPointerUp(e, char.id)}
+                    onPointerCancel={(e) => handleCardPointerCancel(e, char.id)}
+                    onClick={(e) => handleCardClick(char.id, e)}
+                    className={`pointer-events-auto group select-none transition-shadow ${
+                      isDraggingThis
+                        ? 'z-50 scale-105 shadow-[0_25px_50px_rgba(0,0,0,0.85)] ring-2 ring-[#C49A61] cursor-grabbing'
+                        : isSource
+                        ? 'ring-4 ring-[#C0392B] ring-offset-2 ring-offset-[#14100D] scale-105 z-30 cursor-pointer'
                         : isValidTarget
-                        ? 'hover:ring-2 hover:ring-[#E0B77D] hover:scale-105 z-25'
-                        : 'hover:scale-[1.02] z-20'
+                        ? 'hover:ring-2 hover:ring-[#E0B77D] hover:scale-105 z-25 cursor-pointer'
+                        : 'hover:scale-[1.02] z-20 cursor-grab'
                     }`}
                   >
                     {/* Pushpin at Top */}
@@ -1016,6 +1513,132 @@ export const CharacterArchive: React.FC = () => {
                         <div className="w-2 h-2 rounded-full bg-white/70"></div>
                       </div>
                     </div>
+
+                    {/* Red Culprit Pin / Indicator on Border Area */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isCulprit) {
+                          handleRemoveCulprit(char.id);
+                        } else {
+                          handleMarkAsCulprit(char.id);
+                        }
+                      }}
+                      className={`absolute -top-2.5 -right-2.5 z-35 flex items-center justify-center transition-all ${
+                        isCulprit
+                          ? 'opacity-100 scale-100 hover:scale-110'
+                          : 'opacity-0 group-hover:opacity-85 hover:!opacity-100 scale-90 hover:scale-105'
+                      }`}
+                      title={isCulprit ? "Culprit Identified — Click to remove" : "Click to Mark as Culprit"}
+                    >
+                      <div className="relative w-6 h-6 rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.65),0_0_10px_rgba(192,57,43,0.5)] flex items-center justify-center">
+                        <div 
+                          className="absolute inset-0 rounded-full border-2 border-[#4A0E0B]"
+                          style={{
+                            background: isCulprit 
+                              ? 'radial-gradient(circle at 35% 35%, #FF5A4E 0%, #D32F2F 45%, #9A1C16 80%, #5E0D08 100%)'
+                              : 'radial-gradient(circle at 35% 35%, #8C7558 0%, #524131 60%, #2A2016 100%)',
+                          }}
+                        />
+                        <div className="relative w-3 h-3 rounded-full border border-white/70 flex items-center justify-center shadow-inner">
+                          <div className={`w-1.5 h-1.5 rounded-full ${isCulprit ? 'bg-white shadow-[0_0_3px_rgba(255,255,255,0.9)]' : 'bg-red-400'}`} />
+                        </div>
+                        <div 
+                          className="absolute top-0.5 left-1 w-1.5 h-1 rounded-full bg-white/60 -rotate-30 pointer-events-none"
+                          style={{ filter: 'blur(0.2px)' }}
+                        />
+                      </div>
+                    </button>
+
+                    {/* Hand-Drawn Red Marker Highlight for Culprit */}
+                    {isCulprit && (
+                      <div 
+                        key={`culprit-marker-${char.id}-${culpritAnimKey}`}
+                        className="absolute -inset-5 pointer-events-none z-30 overflow-visible"
+                        style={{ filter: 'drop-shadow(0 2px 5px rgba(180, 20, 20, 0.45))' }}
+                      >
+                        <svg 
+                          className="w-full h-full overflow-visible" 
+                          viewBox="0 0 188 228" 
+                          fill="none" 
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <defs>
+                            <style>{`
+                              @keyframes drawMarkerCircle {
+                                0% {
+                                  stroke-dashoffset: 820;
+                                  opacity: 0.1;
+                                }
+                                12% {
+                                  opacity: 1;
+                                }
+                                100% {
+                                  stroke-dashoffset: 0;
+                                  opacity: 1;
+                                }
+                              }
+                              .marker-stroke-main {
+                                stroke-dasharray: 820;
+                                stroke-dashoffset: 0;
+                                animation: drawMarkerCircle 0.85s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+                              }
+                              .marker-stroke-subtle {
+                                stroke-dasharray: 820;
+                                stroke-dashoffset: 0;
+                                animation: drawMarkerCircle 0.92s cubic-bezier(0.25, 0.8, 0.25, 1) 0.04s forwards;
+                              }
+                            `}</style>
+                          </defs>
+
+                          {/* Base bleeding ink under-stroke */}
+                          <path
+                            d="M 104 16 C 138 14 172 38 178 86 C 183 132 174 186 138 214 C 108 228 66 226 38 206 C 14 188 8 144 10 98 C 12 50 42 18 90 14 C 114 12 142 16 160 28"
+                            stroke="#B71C1C"
+                            strokeWidth="4.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeOpacity="0.45"
+                            fill="none"
+                            className="marker-stroke-subtle"
+                          />
+
+                          {/* Main vibrant hand-drawn marker stroke: organic irregular loop with overlap at top */}
+                          <path
+                            d="M 102 18 C 136 15 170 40 176 88 C 182 134 172 184 136 212 C 106 226 68 224 40 204 C 16 186 10 142 12 96 C 14 48 44 19 92 16 C 118 14 146 20 162 30"
+                            stroke="#DC2626"
+                            strokeWidth="3.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeOpacity="0.95"
+                            fill="none"
+                            className="marker-stroke-main"
+                          />
+
+                          {/* Overlapping top flourish: authentic felt-pen second pass or closure overlap */}
+                          <path
+                            d="M 88 15 C 108 14 134 17 154 26 C 164 31 170 38 171 44"
+                            stroke="#EF4444"
+                            strokeWidth="2.6"
+                            strokeLinecap="round"
+                            strokeOpacity="0.8"
+                            fill="none"
+                            className="marker-stroke-subtle"
+                          />
+                        </svg>
+
+                        {/* Authentic CULPRIT Tag near marked character */}
+                        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 pointer-events-none z-40 flex items-center justify-center">
+                          <div className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-[#B03A2E] text-white border-2 border-[#FFCDD2] shadow-[0_2px_10px_rgba(176,58,46,0.7)] transform -rotate-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                            <span className="font-typewriter text-[10px] font-black tracking-widest uppercase">
+                              CULPRIT
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Polaroid Frame: Image + Name underneath ONLY */}
                     <div className="bg-[#EFECE6] p-2.5 pb-3 rounded shadow-2xl border border-[#2D2118] text-center overflow-hidden">
@@ -1047,7 +1670,7 @@ export const CharacterArchive: React.FC = () => {
                       </div>
 
                       {/* Card Hover Actions */}
-                      <div className="mt-2 pt-1.5 border-t border-[#D5CCBA] flex items-center justify-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                      <div className="mt-2 pt-1.5 border-t border-[#D5CCBA] flex items-center justify-center gap-1.5 opacity-85 group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1063,12 +1686,32 @@ export const CharacterArchive: React.FC = () => {
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleCardClick(char, e);
+                            handleCardClick(char.id, e);
                           }}
                           className="px-2 py-0.5 rounded bg-[#D6C6A9] hover:bg-[#C49A61] text-[#231A13] text-[10px] font-typewriter font-bold uppercase transition-colors"
                           title="Open full dossier file"
                         >
                           Dossier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isCulprit) {
+                              handleRemoveCulprit(char.id);
+                            } else {
+                              handleMarkAsCulprit(char.id);
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded text-[10px] font-typewriter font-bold uppercase transition-all flex items-center space-x-1 shadow-sm ${
+                            isCulprit
+                              ? 'bg-[#B03A2E] text-white hover:bg-[#8F1D14] ring-1 ring-red-300'
+                              : 'bg-[#2B1714] text-[#E5A8A3] hover:bg-[#B03A2E] hover:text-white border border-[#8C2E24]'
+                          }`}
+                          title={isCulprit ? "Remove culprit designation" : "Mark as primary culprit"}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isCulprit ? 'bg-white' : 'bg-[#E74C3C]'}`} />
+                          <span>{isCulprit ? 'Culprit' : 'Mark'}</span>
                         </button>
                       </div>
                     </div>
@@ -1118,361 +1761,150 @@ export const CharacterArchive: React.FC = () => {
               </div>
             )}
           </div>
+          </BoardCanvasErrorBoundary>
         ) : (
           /* Detailed Cards Index Grid */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {characters.map(char => (
-              <div
-                key={char.id}
-                onClick={(e) => handleCardClick(char, e)}
-                className="bg-[#1C1713] hover:bg-[#231D18] p-4 rounded-xl border border-[#382E24] cursor-pointer shadow-lg space-y-3 transition-colors flex items-start gap-4 hover:-translate-y-1"
-              >
-                <div className="w-16 h-16 rounded-md overflow-hidden shrink-0 border border-[#C49A61]/40 bg-[#1a1a1a] shadow">
-                  <img src={char.portrait_url} alt={char.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-serif text-base font-bold text-[#F2E8DC] truncate">{char.name}</h4>
-                    <span className="text-[10px] font-typewriter px-1.5 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                      {char.current_status}
-                    </span>
+            {characters.map(char => {
+              const isCulprit = culpritId === char.id;
+              return (
+                <div
+                  key={char.id}
+                  onClick={(e) => handleCardClick(char.id, e)}
+                  className="bg-[#1C1713] hover:bg-[#231D18] p-4 rounded-xl border border-[#382E24] cursor-pointer shadow-lg space-y-3 transition-colors flex items-start gap-4 hover:-translate-y-1 relative"
+                >
+                  <div className="w-16 h-16 rounded-md overflow-hidden shrink-0 border border-[#C49A61]/40 bg-[#1a1a1a] shadow relative">
+                    <img src={char.portrait_url} alt={char.name} className="w-full h-full object-cover" />
+                    {isCulprit && (
+                      <div className="absolute top-0.5 right-0.5 z-10 pointer-events-none" title="Marked as Culprit">
+                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#FF5A4E] to-[#9A1C16] border border-[#4A0E0B] shadow flex items-center justify-center">
+                          <div className="w-1 h-1 rounded-full bg-white"></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <p className="font-typewriter text-xs text-[#C49A61] mt-0.5">{char.role}</p>
-                  <p className="font-serif text-xs text-[#A69482] line-clamp-2 mt-1 leading-snug">
-                    {char.backstory || "Personal background catalogued in dossier."}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-serif text-base font-bold text-[#F2E8DC] truncate">{char.name}</h4>
+                        {isCulprit && (
+                          <span className="px-2 py-0.5 rounded-full bg-[#B03A2E] text-white border border-[#FFCDD2] text-[9px] font-typewriter font-black tracking-wider uppercase shadow">
+                            CULPRIT
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-typewriter px-1.5 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
+                        {char.current_status}
+                      </span>
+                    </div>
+                    <p className="font-typewriter text-xs text-[#C49A61] mt-0.5">{char.role}</p>
+                    <p className="font-serif text-xs text-[#A69482] line-clamp-2 mt-1 leading-snug">
+                      {char.backstory || "Personal background catalogued in dossier."}
+                    </p>
+                    <div className="pt-2 mt-2 border-t border-[#2E241C] flex items-center justify-between">
+                      <span className="text-[10px] font-typewriter text-[#8C7A68]">
+                        {isCulprit ? "Primary Culprit Designation" : "Click to view dossier"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isCulprit) {
+                            handleRemoveCulprit(char.id);
+                          } else {
+                            handleMarkAsCulprit(char.id);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded text-[11px] font-typewriter font-bold uppercase transition-all flex items-center space-x-1.5 ${
+                          isCulprit
+                            ? 'bg-[#B03A2E] text-white hover:bg-[#8F1D14] ring-1 ring-red-300'
+                            : 'bg-[#2B1714] text-[#E5A8A3] hover:bg-[#B03A2E] hover:text-white border border-[#8C2E24]'
+                        }`}
+                        title={isCulprit ? "Remove culprit designation" : "Mark as primary culprit"}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${isCulprit ? 'bg-white' : 'bg-[#E74C3C]'}`} />
+                        <span>{isCulprit ? 'Remove Culprit' : 'Mark as Culprit'}</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* ── DEDICATED CHARACTER DOSSIER VIEW MODAL (RENDERED VIA PORTAL TO BODY) ── */}
-      {selectedDossierChar && typeof document !== 'undefined' && createPortal(
-        <div
-          className="fixed inset-0 z-[9999] overflow-y-auto bg-black/60 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-200"
-          onClick={() => setSelectedDossierChar(null)}
+      {/* ── DEDICATED CHARACTER DETAILS MODAL ── */}
+      <AnimatePresence>
+        {selectedCharacterId && (
+          <CharacterDetailsModal
+            characterId={selectedCharacterId}
+            storyId={activeStory?.id}
+            allCharacters={characters}
+            isCulprit={selectedCharacterId ? culpritId === selectedCharacterId : false}
+            onToggleCulprit={() => {
+              if (selectedCharacterId) {
+                handleToggleCulprit(selectedCharacterId);
+              }
+            }}
+            onSetCulprit={(isCulpritVal) => {
+              if (selectedCharacterId) {
+                handleSetCulprit(selectedCharacterId, isCulpritVal);
+              }
+            }}
+            onClose={handleCloseDossier}
+            onSelectCharacter={(charId) => handleCardClick(charId)}
+            onEdit={(char) => {
+              setEditingChar(char);
+              setModalOpen(true);
+            }}
+            onDelete={(charId, name) => handleDeleteCharacter(charId, name)}
+            onStartConnection={(charId) => handleStartConnection(charId)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── MODAL: CONFIRM REPLACE CULPRIT ── */}
+      {showCulpritConfirm && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowCulpritConfirm(null)}
         >
           <div
-            className="relative w-full max-w-4xl my-auto space-y-3"
             onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-md bg-[#D6C5A9] p-6 sm:p-7 rounded-xl border-2 border-[#8F7454] shadow-2xl text-[#2B2117] space-y-4 my-auto"
           >
-            {/* Top Return Navigation Bar */}
-            <div className="flex items-center justify-between gap-4 bg-[#1C1612] p-3.5 sm:p-4 rounded-xl border border-[#3A2E24] shadow-2xl">
+            <div className="flex items-center space-x-2 text-[#8A2B20] border-b border-[#6E5A44]/40 pb-3">
+              <Target className="w-5 h-5 text-[#C0392B]" />
+              <h3 className="font-serif text-xl font-bold text-[#1E1711]">
+                Replace Identified Culprit?
+              </h3>
+            </div>
+            <p className="font-typewriter text-xs text-[#543F2D] leading-relaxed">
+              <strong>{characters.find(c => c && c.id === showCulpritConfirm.oldId)?.name || 'Current suspect'}</strong> is currently designated as the primary culprit on the evidence board.
+            </p>
+            <p className="font-typewriter text-xs text-[#543F2D] leading-relaxed">
+              Would you like to transfer the culprit designation and hand-drawn marker to <strong>{characters.find(c => c && c.id === showCulpritConfirm.newId)?.name || 'Selected suspect'}</strong>?
+            </p>
+            <div className="pt-3 border-t border-[#8F7556]/40 flex items-center justify-end space-x-2.5">
               <button
                 type="button"
-                onClick={() => setSelectedDossierChar(null)}
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded-lg bg-[#C49A61] hover:bg-[#D6AB72] text-[#14100D] font-typewriter text-xs font-bold uppercase tracking-wider shadow transition-all hover:scale-105 group"
+                onClick={() => setShowCulpritConfirm(null)}
+                className="px-4 py-2 rounded border border-[#6B553E] text-[#2B2117] font-bold uppercase hover:bg-black/5 font-typewriter text-xs"
               >
-                <ArrowLeft className="w-4 h-4 text-[#14100D] group-hover:-translate-x-1 transition-transform" />
-                <span>Return to Relationship Board</span>
+                Cancel
               </button>
-
-              <div className="flex items-center space-x-3 font-typewriter text-xs text-[#A69482]">
-                <span className="uppercase tracking-widest text-[#C49A61] hidden sm:inline">Active Dossier:</span>
-                <span className="font-serif font-bold text-base text-[#F2E8DC]">{String(selectedDossierChar.name || 'Subject')}</span>
-                <span className="px-2 py-0.5 rounded bg-[#291F18] text-[#E0B77D] border border-[#3E3024] uppercase text-[10px]">
-                  {String(selectedDossierChar.role || 'Witness')}
-                </span>
-              </div>
-
               <button
                 type="button"
-                onClick={() => setSelectedDossierChar(null)}
-                className="p-1.5 rounded-lg text-[#9A8978] hover:text-white hover:bg-white/10 transition-colors"
-                title="Close Dossier (Esc)"
+                onClick={handleConfirmReplaceCulprit}
+                className="px-4 py-2 rounded bg-[#8A2B20] hover:bg-[#A8382C] text-white font-bold uppercase font-typewriter text-xs shadow flex items-center space-x-1.5"
               >
-                <X className="w-5 h-5" />
+                <Target className="w-3.5 h-3.5" />
+                <span>Transfer Culprit Mark</span>
               </button>
             </div>
-
-            <DossierErrorBoundary fallbackName={selectedDossierChar.name} onReset={() => setSelectedDossierChar(null)}>
-
-            {/* Physical Investigation Dossier Folder (Solid Antique Parchment Paper Container) */}
-            <div className="relative rounded-2xl bg-[#D6C5A9] p-6 sm:p-9 border-2 border-[#8C7456] shadow-clipboard text-[#2B2117] max-h-[80vh] overflow-y-auto">
-              {/* Status Stamp */}
-              <div className="absolute top-6 right-6">
-                <Stamp
-                  label={selectedDossierChar.current_status === 'Alive' ? "VERIFIED ALIVE" : "CASE STATUS: MISSING"}
-                  type={selectedDossierChar.current_status === 'Alive' ? "green" : "red"}
-                  rotation={-2}
-                  size="sm"
-                />
-              </div>
-
-              {/* Dossier Header */}
-              <div className="flex flex-col sm:flex-row items-start gap-6 border-b border-[#524131]/40 pb-6 mb-6">
-                {/* Large Portrait Photograph */}
-                <div className="shrink-0">
-                  <div className="w-56 sm:w-64 p-3 pb-8 bg-[#EFECE6] rounded shadow-2xl border border-[#2D2118] text-center relative rotate-[-1.5deg]">
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-[#B03A2E] border border-[#5E1914] shadow flex items-center justify-center z-20">
-                      <div className="w-2 h-2 rounded-full bg-white/70"></div>
-                    </div>
-                    <div className="w-full h-48 sm:h-52 bg-[#1a1a1a] rounded-sm overflow-hidden shadow-inner border border-black/20 relative">
-                      <img
-                        src={selectedDossierChar.portrait_url || ''}
-                        alt={String(selectedDossierChar.name || '')}
-                        className="w-full h-full object-cover filter contrast-[1.06] brightness-[0.98] sepia-[0.12]"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-white/10"></div>
-                      <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/75 border border-[#C49A61]/50 text-[10px] font-typewriter tracking-widest text-[#E0B77D] uppercase shadow">
-                        {String(selectedDossierChar.current_status || 'Unknown')}
-                      </div>
-                    </div>
-                    <div className="mt-3 px-1 text-center">
-                      <p className="font-handwriting text-xl sm:text-2xl text-[#241D17] leading-tight font-bold tracking-wide truncate">
-                        {String(selectedDossierChar.name || 'Unknown')}
-                      </p>
-                      <p className="font-sans text-[11px] text-[#6E5C4B] mt-0.5 tracking-wider uppercase truncate">
-                        {String(selectedDossierChar.role || 'Subject')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex-1 space-y-3 font-typewriter text-xs text-[#2A2016]">
-                  <div>
-                    <span className="text-xs text-[#7A644E] uppercase tracking-widest block">CASE SUBJECT DOSSIER</span>
-                    <h2 className="font-serif text-3xl sm:text-4xl font-extrabold text-[#1C150F]">
-                      {String(selectedDossierChar.name || 'Unknown Suspect')}
-                    </h2>
-                    {selectedDossierChar.alias && (
-                      <p className="font-typewriter text-xs text-[#7A362E] font-bold mt-0.5 tracking-wider">
-                        KNOWN CODENAME: "{String(selectedDossierChar.alias)}"
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
-                    <div><strong className="text-[#695441]">Chronological Age:</strong> {String(selectedDossierChar.age || "Undisclosed")}</div>
-                    <div><strong className="text-[#695441]">Narrative Role:</strong> {String(selectedDossierChar.role || "Witness")}</div>
-                    <div><strong className="text-[#695441]">First Record:</strong> {String(selectedDossierChar.first_appearance || "Chapter 1")}</div>
-                    <div><strong className="text-[#695441]">Latest Trace:</strong> {String(selectedDossierChar.last_appearance || "Active Scene")}</div>
-                  </div>
-
-                  {/* Personality Traits Tags */}
-                  <div className="pt-2">
-                    <span className="text-xs text-[#7A644E] uppercase tracking-wider block mb-1">
-                      OBSERVED PSYCHOLOGICAL TRAITS:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {getTraitsList(selectedDossierChar).map((trait, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 rounded bg-[#C7B596] text-[#291F16] border border-[#8C7558] font-bold text-xs"
-                        >
-                          • {String(trait)}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Controls */}
-                  <div className="pt-3 flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingChar(selectedDossierChar);
-                        setModalOpen(true);
-                      }}
-                      className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded bg-[#35281D] hover:bg-[#473729] text-[#E0B77D] font-typewriter text-xs font-bold uppercase transition-colors shadow"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit Dossier</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteCharacter(selectedDossierChar.id, selectedDossierChar.name)}
-                      className="flex items-center space-x-1 px-2.5 py-1.5 rounded border border-[#8F332B]/50 text-[#8F332B] hover:bg-red-900/10 font-typewriter text-xs font-bold uppercase transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleStartConnection(selectedDossierChar.id);
-                        setSelectedDossierChar(null);
-                      }}
-                      className="flex items-center space-x-1 px-3.5 py-1.5 rounded bg-[#8A2B20] hover:bg-[#A8382C] text-white font-typewriter text-xs font-bold uppercase transition-colors shadow-sm ml-auto"
-                    >
-                      <Link2 className="w-3.5 h-3.5" />
-                      <span>Tie Red Thread</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Dossier Body Documents */}
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="bg-[#CCAFA0]/40 p-4 rounded-xl border border-[#8F785C] shadow-inner space-y-1.5">
-                    <span className="font-typewriter text-xs font-bold text-[#6B533E] uppercase tracking-wider flex items-center space-x-1">
-                      <UserCheck className="w-3.5 h-3.5 text-[#8F332B]" />
-                      <span>PHYSICAL SPECIFICATION</span>
-                    </span>
-                    <p className="font-serif text-xs text-[#2A2016] leading-relaxed">
-                      {String(selectedDossierChar.physical_description || "No distinct marks or gait notes catalogued.")}
-                    </p>
-                  </div>
-
-                  <div className="bg-[#CCAFA0]/40 p-4 rounded-xl border border-[#8F785C] shadow-inner space-y-1.5">
-                    <span className="font-typewriter text-xs font-bold text-[#6B533E] uppercase tracking-wider flex items-center space-x-1">
-                      <Target className="w-3.5 h-3.5 text-[#8F332B]" />
-                      <span>OPERATIONAL MOTIVATION</span>
-                    </span>
-                    <p className="font-serif text-xs text-[#2A2016] leading-relaxed">
-                      {String(selectedDossierChar.motivations || "Motives remain obscure.")}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-[#CCAFA0]/40 p-4 rounded-xl border border-[#8F785C] shadow-inner space-y-1.5">
-                  <span className="font-typewriter text-xs font-bold text-[#6B533E] uppercase tracking-wider block">
-                    ARCHIVAL BIOGRAPHY & ORIGINS
-                  </span>
-                  <p className="font-serif text-xs sm:text-sm text-[#241A13] leading-relaxed">
-                    {String(selectedDossierChar.backstory || "Personal background remains undocumented in county manifests.")}
-                  </p>
-                </div>
-
-                {/* Confidential Secrets & Fears */}
-                <div className="bg-[#CCAFA0]/60 p-4 rounded-xl border-2 border-dashed border-[#A84A42]/60 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Key className="w-4 h-4 text-[#A84A42]" />
-                      <span className="font-typewriter text-xs font-bold text-[#7D2922] uppercase tracking-wider">
-                        CONFIDENTIAL INVESTIGATIVE INTEL (SECRETS & FEARS)
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => toggleSecret(selectedDossierChar.id)}
-                      className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#B4473E]/20 hover:bg-[#B4473E]/30 text-[#852C25] font-typewriter text-xs font-bold uppercase transition-colors"
-                    >
-                      {revealedSecrets[selectedDossierChar.id] ? (
-                        <>
-                          <EyeOff className="w-3 h-3" />
-                          <span>Redact Intel</span>
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-3 h-3" />
-                          <span>Reveal Uncensored Intel</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {revealedSecrets[selectedDossierChar.id] ? (
-                    <div className="space-y-2 pt-2 border-t border-[#A84A42]/30 text-xs font-serif text-[#331B18] transition-all">
-                      <p><strong>Primary Vulnerability / Phobia:</strong> {String(selectedDossierChar.fears || "None catalogued.")}</p>
-                      <p><strong>Concealed Secret / Ulterior Agenda:</strong> {String(selectedDossierChar.secrets || "No active secret logged.")}</p>
-                    </div>
-                  ) : (
-                    <p className="font-typewriter text-xs text-[#7A5550] italic">
-                      [REDACTED PURSUANT TO NARRATIVE SECRECY PROTOCOL. CLICK REVEAL TO ACCESS.]
-                    </p>
-                  )}
-                </div>
-
-                {/* Active Board Ties Connected to this Character */}
-                <div className="space-y-2 pt-2 border-t border-[#8F785C]/30">
-                  <span className="font-typewriter text-xs font-bold text-[#63503E] uppercase tracking-wider block">
-                    RED THREAD BOARD RELATIONSHIPS ({
-                      (connections || []).filter(c => c && (c.sourceId === selectedDossierChar.id || c.targetId === selectedDossierChar.id)).length
-                    })
-                  </span>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {(connections || [])
-                      .filter(c => c && (c.sourceId === selectedDossierChar.id || c.targetId === selectedDossierChar.id))
-                      .map((conn, idx) => {
-                        const partnerId = conn.sourceId === selectedDossierChar.id ? conn.targetId : conn.sourceId;
-                        const partner = characters.find(c => c && c.id === partnerId);
-                        const labelText = typeof conn?.label === 'string'
-                          ? conn.label
-                          : (conn?.label && typeof conn.label === 'object' ? ((conn.label as any).label || 'Connected') : 'Connected');
-
-                        return (
-                          <div key={conn.id || `conn_${idx}`} className="p-3 rounded-lg bg-[#CBB89C] border border-[#8C7558] text-xs flex items-center justify-between shadow-sm">
-                            <div className="flex items-center space-x-2.5">
-                              {partner?.portrait_url ? (
-                                <img src={partner.portrait_url} alt="" className="w-8 h-8 rounded-full object-cover border border-[#8C7558]" />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-[#2B2016] text-[#E0B77D] flex items-center justify-center font-bold text-xs border border-[#8C7558]">?</div>
-                              )}
-                              <div>
-                                <span className="font-serif font-bold text-[#2A2016] block">{String(partner?.name || 'Unknown Subject')}</span>
-                                <span className="font-typewriter text-[10px] text-[#7A6451] uppercase">{String(partner?.role || 'Witness')}</span>
-                              </div>
-                            </div>
-                            <span className="px-2 py-0.5 rounded bg-[#231A14] text-[#E5A8A3] border border-[#8B2E24] font-typewriter text-[11px] font-bold uppercase">
-                              {labelText}
-                            </span>
-                          </div>
-                        );
-                      })}
-
-                    {(connections || []).filter(c => c && (c.sourceId === selectedDossierChar.id || c.targetId === selectedDossierChar.id)).length === 0 && (
-                      <p className="font-typewriter text-xs text-[#7A6653] italic col-span-2">
-                        No red threads connected to this suspect yet. Click "Tie Red Thread" above to link them.
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Archival Dossier Relationships (if present) */}
-                {Array.isArray(selectedDossierChar.relationships) && selectedDossierChar.relationships.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-[#8F785C]/30">
-                    <span className="font-typewriter text-xs font-bold text-[#63503E] uppercase tracking-wider block">
-                      NOTED INTERPERSONAL TIES ({selectedDossierChar.relationships.length})
-                    </span>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {selectedDossierChar.relationships.map((rel, idx) => (
-                        <div key={idx} className="p-3 rounded bg-[#CBB89C] border border-[#8C7558] text-xs space-y-1">
-                          <div className="flex items-center justify-between font-typewriter">
-                            <span className="font-bold text-[#2A2016]">{String(rel?.character_name || 'Subject')}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-[#C7B596] text-[#78332B] font-bold text-[10px] uppercase">
-                              {String(rel?.relation_type || 'Known')}
-                            </span>
-                          </div>
-                          {rel?.notes && (
-                            <p className="font-serif text-[11px] text-[#4A3D31] italic">
-                              "{String(rel.notes)}"
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Bottom Return Button */}
-                <div className="pt-5 border-t border-[#8C7456]/40 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedDossierChar(null)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#2B2016] text-[#E0B77D] hover:bg-[#3D2D20] font-typewriter text-xs font-bold uppercase shadow transition-colors"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    <span>Return to Relationship Board</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-            </DossierErrorBoundary>
           </div>
-        </div>,
-        document.body
+        </div>
       )}
 
       {/* ── MODAL 1: DEFINE RELATIONSHIP (NEW THREAD CONNECTION) ── */}

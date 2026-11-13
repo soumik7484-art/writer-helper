@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uuid
@@ -8,6 +8,7 @@ class CharacterCreate(BaseModel):
     name: str
     alias: Optional[str] = ""
     age: Optional[str] = ""
+    gender: Optional[str] = ""
     role: Optional[str] = "Protagonist"
     personality_traits: Optional[List[str]] = []
     backstory: Optional[str] = ""
@@ -21,11 +22,13 @@ class CharacterCreate(BaseModel):
     first_appearance: Optional[str] = "Chapter 1"
     last_appearance: Optional[str] = "Chapter 1"
     portrait_url: Optional[str] = None
+    character_arc: Optional[str] = ""
 
 class CharacterUpdate(BaseModel):
     name: Optional[str] = None
     alias: Optional[str] = None
     age: Optional[str] = None
+    gender: Optional[str] = None
     role: Optional[str] = None
     personality_traits: Optional[List[str]] = None
     backstory: Optional[str] = None
@@ -39,6 +42,7 @@ class CharacterUpdate(BaseModel):
     first_appearance: Optional[str] = None
     last_appearance: Optional[str] = None
     portrait_url: Optional[str] = None
+    character_arc: Optional[str] = None
 
 class Character(BaseModel):
     id: str = Field(default_factory=lambda: f"char_{uuid.uuid4().hex[:10]}")
@@ -46,6 +50,7 @@ class Character(BaseModel):
     name: str
     alias: str = ""
     age: str = ""
+    gender: Optional[str] = ""
     role: str = "Protagonist"
     personality_traits: List[str] = []
     backstory: str = ""
@@ -59,5 +64,6 @@ class Character(BaseModel):
     first_appearance: str = "Chapter 1"
     last_appearance: str = "Chapter 1"
     portrait_url: Optional[str] = None
+    character_arc: Optional[str] = ""
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())

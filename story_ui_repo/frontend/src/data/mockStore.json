@@ -144,7 +144,7 @@
       "status": "completed",
       "created_at": "2026-11-12T19:04:10.689858",
       "updated_at": "2026-11-12T14:06:06.940923",
-      "content": "The rain fell against the leaded panes of 14 High Quay Street with the persistence of a dying pulse.\n\nSilas Vance adjusted the brass desk lamp, the wick sputtering as a draft slipped beneath the heavy oak door. Before him lay a couriers parcel—rough butcher paper, bound with tarred hemp string, smelling unmistakably of brine and dead kelp.\n\nHe slit the twine with his silver folding knife.\n\nInside rested an antique pocket watch. Its heavy silver casing had been blackened by sea salt, the crystal cracked diagonally from the Roman numeral nine to four. The hands were seized at precisely 3:17. When Silas pried the rear casing open with the tip of his thumbnail, no pendulum hummed. Instead, engraved into the balance cock was a single word, cut with precision: REVERIE.\n\nTucked behind the escapement was a folded strip of parchment, stiffened by seawater. It bore no signature—only six lines written in iron gall ink, and a wax seal stamped with the three-headed raven of House Blackwood.\n\nIf you value what remains of the harbor, Vance, do not let Alistair light the maritime lantern tonight.\n\nSilas stood, reaching for his wool overcoat and the Webley revolver in the top drawer. Ravenscar had buried many things beneath its cold cliffs, but tonight, the tide was coughing them back up.\n\nEvery detail of the surroundings seemed etched with quiet menace. The damp sea air clung to the stone walls, condensing into slow, bead-like droplets that trailed downward like silent tears. In the distance, the foghorn sounded at deliberate four-minute intervals—a mournful iron groan that echoed across the jagged headland."
+      "content": "The rain fell against the leaded panes of 14 High Quay Street with the persistence of a dying pulse.\n\nSilas Vance adjusted the brass desk lamp, the wick sputtering as a draft slipped beneath the heavy oak door. Before him lay a couriers parcel\u2014rough butcher paper, bound with tarred hemp string, smelling unmistakably of brine and dead kelp.\n\nHe slit the twine with his silver folding knife.\n\nInside rested an antique pocket watch. Its heavy silver casing had been blackened by sea salt, the crystal cracked diagonally from the Roman numeral nine to four. The hands were seized at precisely 3:17. When Silas pried the rear casing open with the tip of his thumbnail, no pendulum hummed. Instead, engraved into the balance cock was a single word, cut with precision: REVERIE.\n\nTucked behind the escapement was a folded strip of parchment, stiffened by seawater. It bore no signature\u2014only six lines written in iron gall ink, and a wax seal stamped with the three-headed raven of House Blackwood.\n\nIf you value what remains of the harbor, Vance, do not let Alistair light the maritime lantern tonight.\n\nSilas stood, reaching for his wool overcoat and the Webley revolver in the top drawer. Ravenscar had buried many things beneath its cold cliffs, but tonight, the tide was coughing them back up.\n\nEvery detail of the surroundings seemed etched with quiet menace. The damp sea air clung to the stone walls, condensing into slow, bead-like droplets that trailed downward like silent tears. In the distance, the foghorn sounded at deliberate four-minute intervals\u2014a mournful iron groan that echoed across the jagged headland."
     },
     "chap_02": {
       "id": "chap_02",
@@ -222,7 +222,9 @@
       "current_status": "Alive",
       "first_appearance": "Chapter 1",
       "last_appearance": "Chapter 3",
-      "portrait_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop"
+      "portrait_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop",
+      "gender": "Male",
+      "character_arc": "Begins as a detached, cynical investigator haunted by a past naval catastrophe; progressively embraces personal vulnerability and risks everything to protect the truth and innocent lives."
     },
     "char_clara_moreau": {
       "id": "char_clara_moreau",
@@ -258,7 +260,9 @@
       "current_status": "Alive",
       "first_appearance": "Chapter 3",
       "last_appearance": "Chapter 3",
-      "portrait_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600&auto=format&fit=crop"
+      "portrait_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600&auto=format&fit=crop",
+      "gender": "Female",
+      "character_arc": "Evolves from a quiet archival scholar into a decisive field ally, using forbidden historical secrets to stand against powerful conspirators."
     },
     "char_alistair_blackwood": {
       "id": "char_alistair_blackwood",
@@ -294,7 +298,9 @@
       "current_status": "Alive",
       "first_appearance": "Chapter 2",
       "last_appearance": "Chapter 2",
-      "portrait_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=600&auto=format&fit=crop"
+      "portrait_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=600&auto=format&fit=crop",
+      "gender": "Male",
+      "character_arc": "Transitions from an arrogant aristocrat in control to an increasingly desperate puppet trapped by ancestral debts and existential terror."
     },
     "char_evelyn_blackwood": {
       "id": "char_evelyn_blackwood",
@@ -330,7 +336,9 @@
       "current_status": "Missing",
       "first_appearance": "Referenced in Chapter 1",
       "last_appearance": "Chapter 2 (Evidence)",
-      "portrait_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop"
+      "portrait_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop",
+      "gender": "Female",
+      "character_arc": "Shifts from a presumed helpless missing victim to the mastermind and catalyst of the resistance against the maritime occult order."
     },
     "char_7eb057faf2": {
       "story_id": "story_27abba9759",
@@ -356,7 +364,9 @@
       "last_appearance": "Current",
       "portrait_url": "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?q=80&w=600&auto=format&fit=crop",
       "id": "char_7eb057faf2",
-      "updated_at": "2026-11-12T14:07:31.734375"
+      "updated_at": "2026-11-12T14:07:31.734375",
+      "gender": "Male",
+      "character_arc": "Determined to uncover the secrets buried within the estate before his own family's ties to the founders are exposed."
     }
   },
   "events": {
@@ -668,6 +678,56 @@
       ],
       "suggested_correction": "Add a line explaining that the emerald silk was a decoy planted in the bedroom to suggest an abduction from bed.",
       "status": "open"
+    }
+  },
+  "boards": {
+    "story_ravenscar_noir": {
+      "story_id": "story_ravenscar_noir",
+      "positions": {
+        "char_silas_vance": {
+          "x": 60,
+          "y": 60
+        },
+        "char_clara_moreau": {
+          "x": 280,
+          "y": 60
+        },
+        "char_alistair_blackwood": {
+          "x": 500,
+          "y": 60
+        },
+        "char_evelyn_blackwood": {
+          "x": 720,
+          "y": 60
+        }
+      },
+      "connections": [
+        {
+          "id": "conn_silas_clara",
+          "sourceId": "char_silas_vance",
+          "targetId": "char_clara_moreau",
+          "label": "Informant & Ally",
+          "type": "ally",
+          "notes": "Met during dockside investigation"
+        },
+        {
+          "id": "conn_silas_alistair",
+          "sourceId": "char_silas_vance",
+          "targetId": "char_alistair_blackwood",
+          "label": "Primary Suspect",
+          "type": "enemy",
+          "notes": "Interrogated regarding the forged estate deed"
+        },
+        {
+          "id": "conn_alistair_evelyn",
+          "sourceId": "char_alistair_blackwood",
+          "targetId": "char_evelyn_blackwood",
+          "label": "Estranged Siblings",
+          "type": "family",
+          "notes": "Conflicting claims over Ravenscar inheritance"
+        }
+      ],
+      "updated_at": "2026-11-13T12:00:00.000Z"
     }
   }
 }
