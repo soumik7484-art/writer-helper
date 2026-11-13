@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    background-color: #11100F;
+    color: #E2D9CC;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  /* Vintage Investigator Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #141210;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #3B332B;
+    border-radius: 4px;
+    border: 1px solid #231E19;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C49A61;
+  }
+}
+
+/* Cross-browser scrollbar hiding for horizontal navigation bars */
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Aged Parchment Document Simulation - Rich Warm Antique Paper */
+.parchment-sheet {
+  background-color: #C8B699;
+  background-image: 
+    linear-gradient(145deg, #D6C4A6 0%, #C8B698 50%, #BBA88A 100%),
+    repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(110, 85, 55, 0.08) 28px);
+  color: #221912;
+  box-shadow: 
+    0 20px 40px -15px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(100, 75, 45, 0.35),
+    inset 0 0 35px rgba(90, 65, 35, 0.22);
+  position: relative;
+}
+
+.parchment-subtle {
+  background-color: #C4B295;
+  background-image: linear-gradient(160deg, #CEBDA2 0%, #BAA78A 100%);
+  color: #201710;
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(90, 70, 45, 0.3),
+    inset 0 0 25px rgba(100, 75, 45, 0.18);
+}
+
+/* Metal Clip at Top of Clipboard (Phasmophobia Signature) */
+.metal-clipboard-clip {
+  background: linear-gradient(180deg, #A89F91 0%, #6E6458 35%, #3D362E 70%, #827769 100%);
+  border: 1px solid #2A241E;
+  box-shadow: 
+    0 6px 14px rgba(0,0,0,0.7),
+    inset 0 2px 2px rgba(255,255,255,0.4),
+    inset 0 -2px 3px rgba(0,0,0,0.8);
+  position: relative;
+}
+
+.metal-clipboard-clip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60%;
+  height: 6px;
+  background: #1C1713;
+  border-radius: 3px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.3);
+}
+
+/* Adhesive Tape Effect */
+.tape-strip {
+  background: rgba(225, 210, 180, 0.55);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  backdrop-filter: blur(1px);
+  border-top: 1px dashed rgba(255,255,255,0.35);
+  border-bottom: 1px dashed rgba(255,255,255,0.35);
+}
+
+/* Red Investigator Stamp */
+.case-stamp {
+  border: 2.5px solid #A8382F;
+  color: #A8382F;
+  font-family: 'Courier Prime', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 4px 12px;
+  border-radius: 4px;
+  display: inline-block;
+  transform: rotate(-3deg);
+  opacity: 0.92;
+  mask-image: radial-gradient(circle, black 70%, transparent 100%);
+  text-shadow: 0 0 1px rgba(168, 56, 47, 0.4);
+}
+
+.case-stamp-green {
+  border: 2.5px solid #5F7D52;
+  color: #5F7D52;
+  font-family: 'Courier Prime', monospace;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  padding: 4px 12px;
+  border-radius: 4px;
+  display: inline-block;
+  transform: rotate(2deg);
+  opacity: 0.92;
+}
+
+/* Realistic Warm Polaroid Frame */
+.polaroid-card {
+  background: #EAE1D1;
+  padding: 10px 10px 24px 10px;
+  box-shadow: 
+    0 16px 32px -8px rgba(0, 0, 0, 0.7),
+    0 4px 8px -2px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(80, 60, 40, 0.25);
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.polaroid-card:hover {
+  transform: translateY(-4px) scale(1.02) rotate(0deg) !important;
+  box-shadow: 
+    0 22px 40px -10px rgba(0, 0, 0, 0.85),
+    0 6px 12px -2px rgba(196, 154, 97, 0.25);
+  z-index: 20;
+}
+
+/* Pushpin simulation */
+.pushpin {
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle at 35% 35%, #C23A2B, #6E1A11);
+  border-radius: 50%;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.7);
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+/* Evidence thread/yarn simulation */
+.evidence-line {
+  stroke: #B4473E;
+  stroke-width: 2;
+  stroke-dasharray: 4, 3;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7));
+}
+
+/* Vignette overlay */
+.vignette-ambient {
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.75);
+}
+
+/* Ambient glow */
+.brass-glow {
+  box-shadow: 0 0 20px -3px rgba(196, 154, 97, 0.35);
+}

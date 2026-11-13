@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+*/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment & Temp
+.env
+.env.local
+scratch/
+scratch_story_ui_repo_git_backup/
+.DS_Store
+Thumbs.db

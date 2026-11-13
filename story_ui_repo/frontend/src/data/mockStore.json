@@ -1,0 +1,673 @@
+{
+  "stories": {
+    "story_ravenscar_noir": {
+      "id": "story_ravenscar_noir",
+      "title": "The Obsidian Key of Ravenscar",
+      "description": "In the rain-drenched coastal town of Ravenscar, 1894, private investigator Silas Vance unearths a conspiratorial occult society linked to an ancient brass clock tower and the sudden disappearance of Lady Evelyn Blackwood.",
+      "genre": "Mystery",
+      "subgenre": "Victorian Gothic Noir",
+      "theme": "The cost of forbidden truth & generational guilt",
+      "mood": "Suspenseful",
+      "setting": "Ravenscar Cliffside & Maritime Manor",
+      "time_period": "Autumn, 1894",
+      "character_count": 4,
+      "writing_style": "Cinematic, sensory Victorian prose with noir grit",
+      "chapter_count": 6,
+      "ending_type": "Twist Revelation",
+      "cover_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
+      "plot_outline": [
+        {
+          "chapter": 1,
+          "title": "The Cipher on the Tide",
+          "focus": "Silas Vance receives a waterlogged pocket watch with engraved coordinates from an anonymous courier."
+        },
+        {
+          "chapter": 2,
+          "title": "The Shadows of Blackwood Manor",
+          "focus": "An interrogation with Lord Alistair reveals discrepancies in Lady Evelyn disappearance."
+        },
+        {
+          "chapter": 3,
+          "title": "The Whispering Archives",
+          "focus": "Archivist Clara Moreau deciphers the sigil, uncovering a subterranean vault beneath the lighthouse."
+        },
+        {
+          "chapter": 4,
+          "title": "The Bell in the Deep",
+          "focus": "Infiltration of the midnight society and the confrontation at the sea caves."
+        },
+        {
+          "chapter": 5,
+          "title": "Broken Seals",
+          "focus": "The truth about Evelyn staged departure and the artifact true purpose."
+        },
+        {
+          "chapter": 6,
+          "title": "The Tide Reclaims All",
+          "focus": "Climactic standoff upon the crumbling cliffside as the storm breaks."
+        }
+      ],
+      "created_at": "2026-11-12T19:04:10.689858",
+      "updated_at": "2026-11-12T19:04:10.689858"
+    },
+    "story_95b26d2771": {
+      "title": "Integration Test",
+      "description": "Backend + frontend smoke test",
+      "genre": "Mystery",
+      "subgenre": "",
+      "theme": "",
+      "mood": "Suspenseful",
+      "setting": "",
+      "time_period": "",
+      "character_count": 4,
+      "writing_style": "Cinematic & Atmospheric",
+      "chapter_count": 8,
+      "ending_type": "Twist",
+      "plot_outline": [],
+      "cover_url": null,
+      "id": "story_95b26d2771"
+    },
+    "story_8ddd294511": {
+      "title": "Integration Test",
+      "description": "Backend + frontend smoke test",
+      "genre": "Mystery",
+      "subgenre": "",
+      "theme": "",
+      "mood": "Suspenseful",
+      "setting": "",
+      "time_period": "",
+      "character_count": 4,
+      "writing_style": "Cinematic & Atmospheric",
+      "chapter_count": 8,
+      "ending_type": "Twist",
+      "plot_outline": [],
+      "cover_url": null,
+      "id": "story_8ddd294511"
+    },
+    "story_27abba9759": {
+      "title": "the last lady in the house",
+      "description": "A private inquiry agent is summoned to an isolated coastal estate following an impossible disappearance. Strange maritime ciphers and subterranean tide vaults indicate a clandestine pact between the town founders.",
+      "genre": "Horror",
+      "subgenre": "Victorian Gothic Noir",
+      "theme": "The cost of forbidden truth & generational guilt",
+      "mood": "Suspenseful",
+      "setting": "Ravenscar Cliffside & Maritime Manor",
+      "time_period": "Autumn, 1894",
+      "character_count": 4,
+      "writing_style": "Cinematic, sensory Victorian prose with noir grit",
+      "chapter_count": 6,
+      "ending_type": "Twist Revelation",
+      "plot_outline": [
+        {
+          "chapter": 1,
+          "title": "The Cipher on the Threshold",
+          "focus": "A strange artifact arrives under cover of fog, bringing ominous warnings."
+        },
+        {
+          "chapter": 2,
+          "title": "Suspects in the Parlor",
+          "focus": "Interrogations reveal conflicting alibis and buried family debts."
+        },
+        {
+          "chapter": 3,
+          "title": "The Forged Ledger",
+          "focus": "A secret compartment yields documented proof of an unsolved prior crime."
+        },
+        {
+          "chapter": 4,
+          "title": "Footsteps in the Catacombs",
+          "focus": "A perilous midnight descent beneath the town exposes a second conspiracy."
+        },
+        {
+          "chapter": 5,
+          "title": "The Mask Slips",
+          "focus": "The primary suspect is murdered or exposed, shifting the inquiry to an unsuspected ally."
+        },
+        {
+          "chapter": 6,
+          "title": "The Final Reckoning",
+          "focus": "A high-stakes confrontation during a torrential storm as the ultimate truth is forced into the light."
+        }
+      ],
+      "cover_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
+      "id": "story_27abba9759"
+    }
+  },
+  "chapters": {
+    "chap_01": {
+      "id": "chap_01",
+      "story_id": "story_ravenscar_noir",
+      "chapter_number": 1,
+      "title": "The Cipher on the Tide",
+      "summary": "Silas Vance receives the stopped pocket watch at his gas-lit agency during an October gale.",
+      "word_count": 267,
+      "status": "completed",
+      "created_at": "2026-11-12T19:04:10.689858",
+      "updated_at": "2026-11-12T14:06:06.940923",
+      "content": "The rain fell against the leaded panes of 14 High Quay Street with the persistence of a dying pulse.\n\nSilas Vance adjusted the brass desk lamp, the wick sputtering as a draft slipped beneath the heavy oak door. Before him lay a couriers parcel—rough butcher paper, bound with tarred hemp string, smelling unmistakably of brine and dead kelp.\n\nHe slit the twine with his silver folding knife.\n\nInside rested an antique pocket watch. Its heavy silver casing had been blackened by sea salt, the crystal cracked diagonally from the Roman numeral nine to four. The hands were seized at precisely 3:17. When Silas pried the rear casing open with the tip of his thumbnail, no pendulum hummed. Instead, engraved into the balance cock was a single word, cut with precision: REVERIE.\n\nTucked behind the escapement was a folded strip of parchment, stiffened by seawater. It bore no signature—only six lines written in iron gall ink, and a wax seal stamped with the three-headed raven of House Blackwood.\n\nIf you value what remains of the harbor, Vance, do not let Alistair light the maritime lantern tonight.\n\nSilas stood, reaching for his wool overcoat and the Webley revolver in the top drawer. Ravenscar had buried many things beneath its cold cliffs, but tonight, the tide was coughing them back up.\n\nEvery detail of the surroundings seemed etched with quiet menace. The damp sea air clung to the stone walls, condensing into slow, bead-like droplets that trailed downward like silent tears. In the distance, the foghorn sounded at deliberate four-minute intervals—a mournful iron groan that echoed across the jagged headland."
+    },
+    "chap_02": {
+      "id": "chap_02",
+      "story_id": "story_ravenscar_noir",
+      "chapter_number": 2,
+      "title": "The Shadows of Blackwood Manor",
+      "summary": "Silas confronts Lord Alistair Blackwood in his portrait gallery while inspecting the missing lady locked quarters.",
+      "word_count": 210,
+      "status": "completed",
+      "created_at": "2026-11-12T19:04:10.689858",
+      "updated_at": "2026-11-12T19:04:10.689858",
+      "content": "Blackwood Manor stood upon the jagged headland like a vulture perched over a carcass.\n\nLord Alistair Blackwood received Silas in the grand conservatory, where dying orchids hung in humid iron cages. Alistair was a man constructed of sharp angles and nervous habit, his fingers perpetually fidgeting with a heavy gold signet ring.\n\nMy sister was hysterical, Vance. Prone to nighttime wanderings, Alistair said, pouring amber port into two cut-crystal glasses without offering one. She took a boat. A tragic accident of grief.\n\nHysterical women rarely mail stopped watches with coordinates to investigators four hours before they disappear, My Lord, Silas replied softly, producing the silver timepiece from his coat pocket.\n\nAlistairs hand shook. A single droplet of dark wine spilled onto the marble floor.\n\nWhere did you get that? His voice dropped an octave, all veneer of aristocratic composure stripped clean. She kept that locked in the family reliquary. The key was buried with our father.\n\nSilas watched the lords eyes dart toward the grand grandfather clock at the end of the gallery. For a split second, Silas noticed something strange: the clocks brass pendulum was not swinging, yet a rhythmic metallic clicking echoed from behind the mahogany wainscoting."
+    },
+    "chap_03": {
+      "id": "chap_03",
+      "story_id": "story_ravenscar_noir",
+      "chapter_number": 3,
+      "title": "The Whispering Archives",
+      "summary": "Silas consults archivist Clara Moreau to translate the occult sigils and discover the hidden sea vault.",
+      "word_count": 190,
+      "status": "in_review",
+      "created_at": "2026-11-12T19:04:10.689858",
+      "updated_at": "2026-11-12T19:04:10.689858",
+      "content": "The Municipal Archives smelled of vinegar, dust, and decaying leather.\n\nClara Moreau laid the parchment beneath a heavy brass magnifying lens, her spectacles reflecting the yellow glow of three tallow candles. Her finger traced the ravens crest, tracing down to the microscopic script hidden within the feather flourishes.\n\nThis is not Victorian cipher, Silas, Clara murmured, her voice breathless. It is fourteenth-century maritime code. The Order of the Iron Tide.\n\nThe smugglers?\n\nSmugglers do not build underground vaults seventy fathoms into granite cliffs, she countered, sliding an ancient harbor survey across the scarred table. Look here. In 1842, the Blackwood family financed the construction of the north breakwater. On paper, it was to protect merchant vessels. But the excavation records show six hundred tons of stone were hauled out of the reef, not deposited.\n\nShe looked up at Silas, her eyes wide with dread.\n\nWhatever was sealed beneath Ravenscar was never meant to be opened from the sea. It was meant to be unlocked from the manors cellar."
+    },
+    "chap_ac5f38e697": {
+      "story_id": "story_27abba9759",
+      "chapter_number": 1,
+      "title": "The Cipher on the Threshold",
+      "content": "The story of the last lady in the house commences in Ravenscar Cliffside & Maritime Manor during Autumn, 1894.\n\n",
+      "summary": "A strange artifact arrives under cover of fog, bringing ominous warnings.",
+      "status": "draft",
+      "id": "chap_ac5f38e697",
+      "word_count": 19,
+      "updated_at": "2026-11-12T14:07:12.773284"
+    }
+  },
+  "characters": {
+    "char_silas_vance": {
+      "id": "char_silas_vance",
+      "story_id": "story_ravenscar_noir",
+      "name": "Silas Vance",
+      "alias": "The Harbor Hound",
+      "age": "38",
+      "role": "Protagonist",
+      "personality_traits": [
+        "Methodical",
+        "Hyper-observant",
+        "Cynical",
+        "Quietly Compassionate"
+      ],
+      "backstory": "Former naval surgeon turned private inquiry agent after an incident during the Crimean expedition. Settled in Ravenscar seven years ago, specializing in maritime insurance fraud.",
+      "physical_description": "Tall, lean frame with broad shoulders; silvering dark hair, keen gray eyes, and a faint scar along his left jawline. Always wears an oilskin overcoat.",
+      "relationships": [
+        {
+          "character_name": "Clara Moreau",
+          "relation_type": "Trusted Ally & Confidante",
+          "notes": "Relies on her historical knowledge; unexpressed mutual affection."
+        },
+        {
+          "character_name": "Lord Alistair Blackwood",
+          "relation_type": "Adversary / Suspect",
+          "notes": "Suspects Alistair is orchestrating his sisters disappearance."
+        },
+        {
+          "character_name": "Lady Evelyn Blackwood",
+          "relation_type": "Client / Missing Person",
+          "notes": "Sent the pocket watch before vanishing."
+        }
+      ],
+      "motivations": "Uncover the truth behind the Blackwood familys dark maritime pact before innocent dockworkers perish.",
+      "goals": "Locate Lady Evelyn alive and decode the obsidian key.",
+      "fears": "Drowning in enclosed underground water; repeating the medical catastrophe of his naval past.",
+      "secrets": "Possesses a second matching watch given to him by an unknown officer during the Crimean war.",
+      "current_status": "Alive",
+      "first_appearance": "Chapter 1",
+      "last_appearance": "Chapter 3",
+      "portrait_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop"
+    },
+    "char_clara_moreau": {
+      "id": "char_clara_moreau",
+      "story_id": "story_ravenscar_noir",
+      "name": "Clara Moreau",
+      "alias": "The Keeper of Ravenscar",
+      "age": "32",
+      "role": "Companion / Mentor",
+      "personality_traits": [
+        "Scholarly",
+        "Perceptive",
+        "Cautious",
+        "Resilient"
+      ],
+      "backstory": "Daughter of a French cartographer who died mysteriously during the harbor surveys. Took over the municipal archive ten years ago.",
+      "physical_description": "Dark auburn hair pinned into a practical chignon, round brass spectacles, ink-stained fingers, wears high-collared tweed waistcoats.",
+      "relationships": [
+        {
+          "character_name": "Silas Vance",
+          "relation_type": "Partner in Investigation",
+          "notes": "Deep intellectual bond and mutual protective instinct."
+        },
+        {
+          "character_name": "Lady Evelyn Blackwood",
+          "relation_type": "Childhood Friend",
+          "notes": "Shared clandestine correspondence regarding occult cartography."
+        }
+      ],
+      "motivations": "Vindicate her fathers discredited maritime theories and save Evelyn.",
+      "goals": "Translate the complete Order of the Iron Tide codex.",
+      "fears": "The destruction of historical truth; fire in the archive.",
+      "secrets": "Stole an original harbor survey ledger from the town hall vaults five years ago.",
+      "current_status": "Alive",
+      "first_appearance": "Chapter 3",
+      "last_appearance": "Chapter 3",
+      "portrait_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600&auto=format&fit=crop"
+    },
+    "char_alistair_blackwood": {
+      "id": "char_alistair_blackwood",
+      "story_id": "story_ravenscar_noir",
+      "name": "Lord Alistair Blackwood",
+      "alias": "The Gilded Raven",
+      "age": "45",
+      "role": "Antagonist",
+      "personality_traits": [
+        "Arrogant",
+        "Superstitious",
+        "Secretly Terrified",
+        "Manipulative"
+      ],
+      "backstory": "Current head of the Blackwood merchant dynasty. Succeeded his father three years ago under ambiguous circumstances.",
+      "physical_description": "Impeccably tailored morning coat, pale gaunt face, thinning blond hair, manicured mustache, nervous twitch in right hand.",
+      "relationships": [
+        {
+          "character_name": "Lady Evelyn Blackwood",
+          "relation_type": "Estranged Sister",
+          "notes": "Views her as a dangerous threat to the familys financial empire."
+        },
+        {
+          "character_name": "Silas Vance",
+          "relation_type": "Intimidator",
+          "notes": "Attempting to bribe and subtly threaten Silas off the investigation."
+        }
+      ],
+      "motivations": "Maintain the Blackwood estates solvency by fulfilling the ancestral blood covenant before the winter solstice.",
+      "goals": "Recover the obsidian key and seal the sea cavern.",
+      "fears": "Public ruin and whatever entity resides beneath the north breakwater.",
+      "secrets": "Drugged Evelyn on the night of her disappearance, though she subsequently escaped.",
+      "current_status": "Alive",
+      "first_appearance": "Chapter 2",
+      "last_appearance": "Chapter 2",
+      "portrait_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=600&auto=format&fit=crop"
+    },
+    "char_evelyn_blackwood": {
+      "id": "char_evelyn_blackwood",
+      "story_id": "story_ravenscar_noir",
+      "name": "Lady Evelyn Blackwood",
+      "alias": "The Veiled Siren",
+      "age": "28",
+      "role": "Foil / Mystery Inciter",
+      "personality_traits": [
+        "Courageous",
+        "Deceptive",
+        "Resourceful",
+        "Haunted"
+      ],
+      "backstory": "Educated abroad in botanical sciences. Discovered the occult ledgers locked in her late fathers safe upon returning to Ravenscar.",
+      "physical_description": "Raven hair, striking violet eyes, pale aristocratic complexion; left behind a torn silk emerald gown in her bedroom.",
+      "relationships": [
+        {
+          "character_name": "Silas Vance",
+          "relation_type": "Selected Savior",
+          "notes": "Specifically targeted Silas because of his spotless reputation."
+        },
+        {
+          "character_name": "Clara Moreau",
+          "relation_type": "Lifelong Ally",
+          "notes": "Left hidden clues Clara alone could decipher."
+        }
+      ],
+      "motivations": "Break the Blackwood curse and prevent the bell in the deep from chiming.",
+      "goals": "Reach the subterranean sea chamber ahead of her brothers mercenaries.",
+      "fears": "Succumbing to the hereditary madness of her family.",
+      "secrets": "Is currently hiding in the abandoned salt cellar beneath the old smugglers pier.",
+      "current_status": "Missing",
+      "first_appearance": "Referenced in Chapter 1",
+      "last_appearance": "Chapter 2 (Evidence)",
+      "portrait_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop"
+    },
+    "char_7eb057faf2": {
+      "story_id": "story_27abba9759",
+      "name": "Julian Calder",
+      "alias": "The Shadow Ledger",
+      "age": "36",
+      "role": "Protagonist",
+      "personality_traits": [
+        "Methodical",
+        "Unsentimental",
+        "Steadfast",
+        "Cautious"
+      ],
+      "backstory": "Former forensic accountant for the maritime commission who uncovered systematic smuggling along the northern straits.",
+      "physical_description": "Sharp hawk-like features, steel-framed spectacles, wears charcoal wool overcoats with reinforced inner pockets.",
+      "relationships": [],
+      "motivations": "Expose the high-ranking syndicate responsible for his partner's suspicious death.",
+      "goals": "Recover the missing double-entry manifests before the audit committee convenes.",
+      "fears": "Being framed for the embezzlement he spent three years documenting.",
+      "secrets": "Retains the private telegraph key capable of intercepting port communications.",
+      "current_status": "Alive",
+      "first_appearance": "Chapter 1",
+      "last_appearance": "Current",
+      "portrait_url": "https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?q=80&w=600&auto=format&fit=crop",
+      "id": "char_7eb057faf2",
+      "updated_at": "2026-11-12T14:07:31.734375"
+    }
+  },
+  "events": {
+    "evt_01": {
+      "id": "evt_01",
+      "story_id": "story_ravenscar_noir",
+      "event_number": 1,
+      "title": "Delivery of the Salt-Soaked Watch",
+      "description": "An unidentified harbor boy delivers a waterlogged package to Silas Vance inquiry office at 14 High Quay Street. The rear casing contains the cipher REVERIE.",
+      "illustration_url": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Silas Vance"
+      ],
+      "location": "Silas Vance Office, 14 High Quay St",
+      "chapter_id": "chap_01",
+      "chapter_number": 1,
+      "chronological_position": 1.0,
+      "status": "Completed",
+      "consequences": [
+        "Silas takes up the investigation",
+        "The Blackwood crest is tied to the crime"
+      ],
+      "category": "discovery"
+    },
+    "evt_02": {
+      "id": "evt_02",
+      "story_id": "story_ravenscar_noir",
+      "event_number": 2,
+      "title": "Inspection of the Broken Bedroom",
+      "description": "Silas arrives at Blackwood Manor. Inside Lady Evelyn bedchamber, the French doors are shattered inward, and torn scraps of emerald silk are stuck on the iron balcony.",
+      "illustration_url": "https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Silas Vance",
+        "Lord Alistair Blackwood"
+      ],
+      "location": "Blackwood Manor West Wing",
+      "chapter_id": "chap_02",
+      "chapter_number": 2,
+      "chronological_position": 2.0,
+      "status": "Completed",
+      "consequences": [
+        "Confirms Evelyn did not leave willingly",
+        "Disproves Alistair suicide claim"
+      ],
+      "category": "plot_turn"
+    },
+    "evt_03": {
+      "id": "evt_03",
+      "story_id": "story_ravenscar_noir",
+      "event_number": 3,
+      "title": "Alistairs Glass Spills",
+      "description": "During interrogation, Silas produces the pocket watch. Alistair experiences a visible panic attack and claims the key to that watch was buried with their father.",
+      "illustration_url": "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Silas Vance",
+        "Lord Alistair Blackwood"
+      ],
+      "location": "The Grand Conservatory, Blackwood Manor",
+      "chapter_id": "chap_02",
+      "chapter_number": 2,
+      "chronological_position": 3.0,
+      "status": "Completed",
+      "consequences": [
+        "Alistair is confirmed hiding crucial knowledge of the heirloom"
+      ],
+      "category": "conflict"
+    },
+    "evt_04": {
+      "id": "evt_04",
+      "story_id": "story_ravenscar_noir",
+      "event_number": 4,
+      "title": "Uncovering the Granite Breakwater Blueprint",
+      "description": "Clara Moreau pulls the 1842 harbor survey ledgers. Six hundred tons of stone were removed from the reef, constructing a hidden subterranean chamber under the sea bed.",
+      "illustration_url": "https://images.unsplash.com/photo-1461360370896-922624d12aa1?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Silas Vance",
+        "Clara Moreau"
+      ],
+      "location": "Ravenscar Municipal Archives",
+      "chapter_id": "chap_03",
+      "chapter_number": 3,
+      "chronological_position": 4.0,
+      "status": "Current",
+      "consequences": [
+        "Target coordinates established for the midnight expedition"
+      ],
+      "category": "revelation"
+    },
+    "evt_05": {
+      "id": "evt_05",
+      "story_id": "story_ravenscar_noir",
+      "event_number": 5,
+      "title": "The Decoded Iron Tide Codex",
+      "description": "Clara identifies the secret iron gall inscription as fourteenth-century maritime script describing The Obsidian Key capable of releasing the subterranean lock.",
+      "illustration_url": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Clara Moreau"
+      ],
+      "location": "Municipal Archives",
+      "chapter_id": "chap_03",
+      "chapter_number": 3,
+      "chronological_position": 5.0,
+      "status": "Upcoming",
+      "consequences": [
+        "Warns of severe seismic repercussions if the vault is opened at low tide"
+      ],
+      "category": "revelation"
+    },
+    "evt_06": {
+      "id": "evt_06",
+      "story_id": "story_ravenscar_noir",
+      "event_number": 6,
+      "title": "Midnight Infiltration of the Smugglers Grotto",
+      "description": "Silas and Clara descend into the sea cave beneath the north lighthouse as the tide rises to their knees.",
+      "illustration_url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Silas Vance",
+        "Clara Moreau"
+      ],
+      "location": "North Reef Sea Caverns",
+      "chapter_id": "chap_04",
+      "chapter_number": 4,
+      "chronological_position": 6.0,
+      "status": "Upcoming",
+      "consequences": [
+        "Direct encounter with Lord Alistairs armed henchmen"
+      ],
+      "category": "conflict"
+    },
+    "evt_07": {
+      "id": "evt_07",
+      "story_id": "story_ravenscar_noir",
+      "event_number": 7,
+      "title": "Confrontation at the Submerged Altar",
+      "description": "Evelyn is discovered barricaded inside the tidal chamber with the obsidian key in hand.",
+      "illustration_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Lady Evelyn Blackwood",
+        "Silas Vance",
+        "Lord Alistair Blackwood"
+      ],
+      "location": "The Submerged Sea Vault",
+      "chapter_id": "chap_05",
+      "chapter_number": 5,
+      "chronological_position": 7.0,
+      "status": "Locked",
+      "consequences": [
+        "The true nature of the family ancient bargain is laid bare"
+      ],
+      "category": "revelation"
+    },
+    "evt_4f4ba2632f": {
+      "id": "evt_4f4ba2632f",
+      "story_id": "story_27abba9759",
+      "event_number": 2,
+      "title": "Critical Discovery in Chapter 1",
+      "description": "Crucial evidence was uncovered, fundamentally shifting the investigative direction.",
+      "illustration_url": "https://images.unsplash.com/photo-1457369804613-52c61a468e7d?q=80&w=600&auto=format&fit=crop",
+      "characters_involved": [
+        "Protagonist"
+      ],
+      "location": "Primary Scene Location",
+      "chapter_id": "chap_ac5f38e697",
+      "chapter_number": 1,
+      "chronological_position": 1.0,
+      "status": "Current",
+      "consequences": [
+        "New investigative lead unlocked"
+      ],
+      "category": "discovery",
+      "updated_at": "2026-11-12T14:08:41.871173"
+    }
+  },
+  "memories": {
+    "mem_01": {
+      "id": "mem_01",
+      "story_id": "story_ravenscar_noir",
+      "title": "The Cipher Word REVERIE",
+      "description": "Engraved inside the balance cock of the salt-blackened pocket watch. Serves as the passphrase for the second lock in the Blackwood family reliquary.",
+      "category": "objects",
+      "source_chapter": "Chapter 1",
+      "related_character": "Silas Vance",
+      "related_location": "High Quay Street",
+      "importance": "High"
+    },
+    "mem_02": {
+      "id": "mem_02",
+      "story_id": "story_ravenscar_noir",
+      "title": "Stopped Time at 3:17",
+      "description": "The exact time the pocket watch was immersed in sea water. Matches the recorded peak of the spring low tide on October 14th.",
+      "category": "important_events",
+      "source_chapter": "Chapter 1",
+      "related_character": "Lady Evelyn Blackwood",
+      "related_location": "Ravenscar Bay",
+      "importance": "High"
+    },
+    "mem_03": {
+      "id": "mem_03",
+      "story_id": "story_ravenscar_noir",
+      "title": "The Three-Headed Raven Seal",
+      "description": "The hereditary wax seal of House Blackwood, dating back to 1680. Used only on matters of succession or secret family trusts.",
+      "category": "world_rules",
+      "source_chapter": "Chapter 1",
+      "related_character": "Lord Alistair Blackwood",
+      "related_location": "Blackwood Manor",
+      "importance": "Medium"
+    },
+    "mem_04": {
+      "id": "mem_04",
+      "story_id": "story_ravenscar_noir",
+      "title": "1842 Reef Excavation Secret",
+      "description": "Six hundred tons of granite were removed from the north breakwater under the guise of harbor repairs to carve out a submerged occult chamber.",
+      "category": "history",
+      "source_chapter": "Chapter 3",
+      "related_character": "Clara Moreau",
+      "related_location": "North Breakwater",
+      "importance": "High"
+    },
+    "mem_05": {
+      "id": "mem_05",
+      "story_id": "story_ravenscar_noir",
+      "title": "The Order of the Iron Tide",
+      "description": "A clandestine fraternity of Victorian industrialists and harbor masters who believe an ancient leviathan sleeps beneath the bay.",
+      "category": "world_rules",
+      "source_chapter": "Chapter 3",
+      "related_character": "Lord Alistair Blackwood",
+      "related_location": "Municipal Archives",
+      "importance": "High"
+    },
+    "mem_06": {
+      "id": "mem_06",
+      "story_id": "story_ravenscar_noir",
+      "title": "Alistairs Gold Signet Ring",
+      "description": "Carries an internal compartment containing cyanide or powdered belladonna. Alistair turns it when under severe interrogation stress.",
+      "category": "objects",
+      "source_chapter": "Chapter 2",
+      "related_character": "Lord Alistair Blackwood",
+      "related_location": "Conservatory",
+      "importance": "Medium"
+    },
+    "mem_07": {
+      "id": "mem_07",
+      "story_id": "story_ravenscar_noir",
+      "title": "Claras Stolen Harbor Ledger",
+      "description": "Clara holds an illegal copy of the original 1842 town surveyors journal, which her late father hid before his fatal boat accident.",
+      "category": "character_facts",
+      "source_chapter": "Chapter 3",
+      "related_character": "Clara Moreau",
+      "related_location": "Municipal Archives",
+      "importance": "High"
+    },
+    "mem_08": {
+      "id": "mem_08",
+      "story_id": "story_ravenscar_noir",
+      "title": "The Obsidian Key",
+      "description": "A non-metallic black stone key carved with spiraling tide markers. Opens the inner sanctum beneath the submerged altar.",
+      "category": "objects",
+      "source_chapter": "Chapter 3",
+      "related_character": "Lady Evelyn Blackwood",
+      "related_location": "Submerged Sea Vault",
+      "importance": "High"
+    }
+  },
+  "plotholes": {
+    "issue_01": {
+      "id": "issue_01",
+      "story_id": "story_ravenscar_noir",
+      "title": "Pocket Watch Key Contradiction",
+      "category": "object_continuity_error",
+      "severity": "Critical",
+      "description": "Contradiction regarding the custody and existence of the reliquary key for the Blackwood watch.",
+      "previous_conflicting_info": "Chapter 1: Silas effortlessly opens the watch outer casing with his thumbnail at his desk.",
+      "current_conflicting_info": "Chapter 2: Lord Alistair swears under oath that the watch cannot be opened without a key that was buried with his father.",
+      "source_chapters": [
+        "Chapter 1",
+        "Chapter 2"
+      ],
+      "suggested_correction": "Clarify that Silas only opened the outer watch casing, whereas the inner movement gear compartment requires the ancestral brass key.",
+      "status": "open"
+    },
+    "issue_02": {
+      "id": "issue_02",
+      "story_id": "story_ravenscar_noir",
+      "title": "Weather & Wave Height Inconsistency",
+      "category": "timeline_contradiction",
+      "severity": "Warning",
+      "description": "Tidal timing discrepancy between Silas leaving his office and arriving at the Manor.",
+      "previous_conflicting_info": "Chapter 1: Silas notes the gale is blowing inland at low tide (3:17 AM).",
+      "current_conflicting_info": "Chapter 2: Lord Alistair describes his sister leaving by rowboat at 3:30 AM into raging 15-foot breaker waves that would have smashed any boat against the reef.",
+      "source_chapters": [
+        "Chapter 1",
+        "Chapter 2"
+      ],
+      "suggested_correction": "Have Silas point out this exact physical impossibility to Alistair during the conservatory confrontation to catch him in a deliberate lie.",
+      "status": "open"
+    },
+    "issue_03": {
+      "id": "issue_03",
+      "story_id": "story_ravenscar_noir",
+      "title": "Lady Evelyn Dress Description",
+      "category": "character_inconsistency",
+      "severity": "Suggestion",
+      "description": "Discrepancy in the color and fabric of Evelyn abandoned clothing.",
+      "previous_conflicting_info": "Chapter 2: Silas discovers torn scraps of emerald silk caught on the balcony railing.",
+      "current_conflicting_info": "Chapter 3: Clara recalls Evelyn wearing a dark wool traveling cape and sturdy boots on the afternoon before her vanishing.",
+      "source_chapters": [
+        "Chapter 2",
+        "Chapter 3"
+      ],
+      "suggested_correction": "Add a line explaining that the emerald silk was a decoy planted in the bedroom to suggest an abduction from bed.",
+      "status": "open"
+    }
+  }
+}
