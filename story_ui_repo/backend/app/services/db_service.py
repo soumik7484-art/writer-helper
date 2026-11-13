@@ -41,6 +41,7 @@ class DatabaseService:
                     "memories": {},
                     "plotholes": {},
                     "boards": {},
+                    "investigation_boards": {},
                     "culprits": {}
                 }
                 self._save_local(initial_data)
@@ -48,17 +49,19 @@ class DatabaseService:
     def _load_local(self) -> Dict[str, Any]:
         with lock:
             if not self.local_file.exists():
-                return {"stories": {}, "chapters": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "culprits": {}}
+                return {"stories": {}, "chapters": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "investigation_boards": {}, "culprits": {}}
             try:
                 with open(self.local_file, "r", encoding="utf-8") as f:
                     loaded = json.load(f)
                     if "boards" not in loaded:
                         loaded["boards"] = {}
+                    if "investigation_boards" not in loaded:
+                        loaded["investigation_boards"] = {}
                     if "culprits" not in loaded:
                         loaded["culprits"] = {}
                     return loaded
             except Exception:
-                return {"stories": {}, "chapters": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "culprits": {}}
+                return {"stories": {}, "chapters": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "investigation_boards": {}, "culprits": {}}
 
     def _save_local(self, data: Dict[str, Any]):
         with lock:
@@ -301,6 +304,29 @@ class DatabaseService:
         if "boards" not in data:
             data["boards"] = {}
         data["boards"][story_id] = payload
+        self._save_local(data)
+        return payload
+
+    def get_investigation_board(self, story_id: str) -> Optional[Dict[str, Any]]:
+        if self.use_mongo:
+            doc = self.db.investigation_boards.find_one({"story_id": story_id})
+            if doc:
+                doc.pop("_id", None)
+            return doc
+        data = self._load_local()
+        return data.get("investigation_boards", {}).get(story_id)
+
+    def save_investigation_board(self, story_id: str, board_data: Dict[str, Any]) -> Dict[str, Any]:
+        payload = dict(board_data)
+        payload["story_id"] = story_id
+        payload["updated_at"] = datetime.utcnow().isoformat()
+        if self.use_mongo:
+            self.db.investigation_boards.update_one({"story_id": story_id}, {"$set": payload}, upsert=True)
+            return payload
+        data = self._load_local()
+        if "investigation_boards" not in data:
+            data["investigation_boards"] = {}
+        data["investigation_boards"][story_id] = payload
         self._save_local(data)
         return payload
 

@@ -5,6 +5,7 @@ import { NavTab } from '../components/common/Navbar';
 import { PlotHole, PlotHoleSeverity, PlotHoleCategory } from '../types';
 import { Stamp } from '../components/common/Stamp';
 import { sound } from '../services/audioService';
+import { InvestigationBoard } from '../components/investigation/InvestigationBoard';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   AlertTriangle, 
@@ -20,7 +21,9 @@ import {
   BookOpen, 
   Check, 
   X,
-  FileCheck
+  FileCheck,
+  LayoutGrid,
+  FileText
 } from 'lucide-react';
 
 interface PlotHoleDetectorProps {
@@ -30,6 +33,7 @@ interface PlotHoleDetectorProps {
 export const PlotHoleDetector: React.FC<PlotHoleDetectorProps> = ({ onNavigate }) => {
   const { activeStory, setActiveChapterId, addToast } = useStory();
 
+  const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
   const [issues, setIssues] = useState<PlotHole[]>([]);
   const [loading, setLoading] = useState(false);
   const [auditing, setAuditing] = useState(false);
@@ -99,9 +103,9 @@ export const PlotHoleDetector: React.FC<PlotHoleDetectorProps> = ({ onNavigate }
   };
 
   // Severity metrics
-  const criticalCount = issues.filter(i => i.severity === 'Critical' && i.status === 'open').length;
-  const warningCount = issues.filter(i => i.severity === 'Warning' && i.status === 'open').length;
-  const suggestionCount = issues.filter(i => i.severity === 'Suggestion' && i.status === 'open').length;
+  const criticalCount = issues.filter(i => (i.severity === 'Critical') && i.status === 'open').length;
+  const warningCount = issues.filter(i => (i.severity === 'Warning' || i.severity === 'High') && i.status === 'open').length;
+  const suggestionCount = issues.filter(i => (i.severity === 'Suggestion' || i.severity === 'Medium' || i.severity === 'Low') && i.status === 'open').length;
   const resolvedCount = issues.filter(i => i.status === 'resolved').length;
 
   const filteredIssues = issues.filter(i => {
@@ -111,6 +115,18 @@ export const PlotHoleDetector: React.FC<PlotHoleDetectorProps> = ({ onNavigate }
     return i.severity === selectedSeverity && i.status === 'open';
   });
 
+  // 1. PRIMARY VIEW: INTERACTIVE INVESTIGATION CORKBOARD
+  if (viewMode === 'board') {
+    return (
+      <div className="w-full h-full flex flex-col">
+        <InvestigationBoard
+          onNavigateToStudio={() => onNavigate('studio')}
+        />
+      </div>
+    );
+  }
+
+  // 2. SECONDARY VIEW: CASE FILES EDITORIAL AUDIT TABLE
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-8 space-y-6">
       
@@ -131,15 +147,26 @@ export const PlotHoleDetector: React.FC<PlotHoleDetectorProps> = ({ onNavigate }
           </p>
         </div>
 
-        {/* Audit Button */}
-        <button
-          onClick={handleRunAudit}
-          disabled={auditing}
-          className="flex items-center space-x-2 px-5 py-2.5 rounded bg-[#B4473E] hover:bg-[#C85248] text-white font-typewriter text-xs uppercase font-bold tracking-wider shadow-lg transition-all disabled:opacity-50"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>{auditing ? "Scanning Chronology..." : "Run AI Continuity Audit"}</span>
-        </button>
+        {/* View Switcher & Audit Button */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setViewMode('board')}
+            className="flex items-center space-x-2 px-4 py-2.5 rounded bg-[#201A14] hover:bg-[#2C2118] border border-[#C49A61] text-[#C49A61] font-typewriter text-xs uppercase font-bold tracking-wider transition-all"
+          >
+            <LayoutGrid className="w-4 h-4" />
+            <span>Interactive Corkboard</span>
+          </button>
+
+          <button
+            onClick={handleRunAudit}
+            disabled={auditing}
+            className="flex items-center space-x-2 px-5 py-2.5 rounded bg-[#B4473E] hover:bg-[#C85248] text-white font-typewriter text-xs uppercase font-bold tracking-wider shadow-lg transition-all disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{auditing ? "Scanning Chronology..." : "Run AI Continuity Audit"}</span>
+          </button>
+        </div>
       </div>
 
       {/* Summary Scoreboard Cards */}

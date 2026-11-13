@@ -8,7 +8,10 @@ import {
   OutlineItem,
   CoWriterPayload,
   CoWriterResponse,
-  VectorPipelineExplanation
+  VectorPipelineExplanation,
+  InvestigationBoardState,
+  InvestigationCard,
+  InvestigationConnection
 } from '../types';
 import rawMockData from '../data/mockStore.json';
 
@@ -681,6 +684,288 @@ class ApiService {
       const audit_results = list.filter(p => p.story_id === storyId);
       return { audit_results, total_detected: audit_results.length };
     }
+  }
+
+  // =========================================================================
+  // INVESTIGATION BOARD API METHODS
+  // =========================================================================
+
+  async getInvestigationBoard(storyId: string): Promise<InvestigationBoardState> {
+    try {
+      return await this.request<InvestigationBoardState>(`/api/stories/${storyId}/investigation-board`);
+    } catch {
+      // Local fallback with persistence in localStorage
+      const saved = localStorage.getItem(`storyweave_investigation_board_${storyId}`);
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {}
+      }
+      return this.generateFallbackInvestigationBoard(storyId);
+    }
+  }
+
+  async saveInvestigationBoard(storyId: string, board: InvestigationBoardState): Promise<InvestigationBoardState> {
+    const payload = { ...board, story_id: storyId, updated_at: new Date().toISOString() };
+    try {
+      localStorage.setItem(`storyweave_investigation_board_${storyId}`, JSON.stringify(payload));
+    } catch {}
+
+    try {
+      return await this.request<InvestigationBoardState>(`/api/stories/${storyId}/investigation-board`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+    } catch {
+      return payload;
+    }
+  }
+
+  async generateInvestigationBoard(storyId: string): Promise<InvestigationBoardState> {
+    try {
+      const res = await this.request<InvestigationBoardState>(`/api/stories/${storyId}/investigation-board/generate`, {
+        method: 'POST',
+      });
+      try {
+        localStorage.setItem(`storyweave_investigation_board_${storyId}`, JSON.stringify(res));
+      } catch {}
+      return res;
+    } catch {
+      const fallback = this.generateFallbackInvestigationBoard(storyId);
+      try {
+        localStorage.setItem(`storyweave_investigation_board_${storyId}`, JSON.stringify(fallback));
+      } catch {}
+      return fallback;
+    }
+  }
+
+  async runIncrementalAnalysis(storyId: string, chapterId?: string): Promise<{ board: InvestigationBoardState; new_items_added: number; status: string; message: string }> {
+    try {
+      return await this.request<{ board: InvestigationBoardState; new_items_added: number; status: string; message: string }>(`/api/stories/${storyId}/investigation-board/incremental`, {
+        method: 'POST',
+        body: JSON.stringify({ chapter_id: chapterId })
+      });
+    } catch {
+      const board = await this.getInvestigationBoard(storyId);
+      const newCard: InvestigationCard = {
+        id: `card_inc_${Math.random().toString(36).substring(2, 9)}`,
+        story_id: storyId,
+        type: 'evidence',
+        title: 'New Chapter Evidence Excerpt',
+        subtitle: 'Incremental Inquiry',
+        description: 'New narrative threads cross-referenced against established Universe Memory.',
+        status: 'unverified',
+        color: 'aged',
+        position: { x: 450, y: 820 },
+      };
+      board.elements.push(newCard);
+      await this.saveInvestigationBoard(storyId, board);
+      return { board, new_items_added: 1, status: 'success', message: 'Incorporated new findings into board.' };
+    }
+  }
+
+  private generateFallbackInvestigationBoard(storyId: string): InvestigationBoardState {
+    const chars = Object.values(localStore.characters || {}).filter((c: any) => c.story_id === storyId) as Character[];
+    const timeline = Object.values(localStore.events || {}).filter((e: any) => e.story_id === storyId) as TimelineEvent[];
+
+    const elements: InvestigationCard[] = [
+      {
+        id: `card_dossier_${storyId}`,
+        story_id: storyId,
+        type: 'clue',
+        title: 'CASE FILE: #47A',
+        subtitle: 'ACTIVE INVESTIGATION',
+        description: 'INQUIRY: THE OBSIDIAN KEY OF RAVENSCAR\nSTATUS: ACTIVE CONTINUITY INQUIRY',
+        status: 'verified',
+        is_pinned: true,
+        color: 'aged',
+        position: { x: 60, y: 60 }
+      },
+      {
+        id: `card_surv_${storyId}`,
+        story_id: storyId,
+        type: 'clue',
+        title: '24/7 SURVEILLANCE',
+        subtitle: 'Harbor Slip 4',
+        description: 'Night watch ordered. Track courier departures.',
+        status: 'unverified',
+        is_pinned: false,
+        color: 'yellow',
+        position: { x: 310, y: 70 }
+      },
+      {
+        id: `card_loc_manor_${storyId}`,
+        story_id: storyId,
+        type: 'location',
+        title: 'Blackwood Cliffside Manor',
+        subtitle: 'Location • Chapter 1 & 2',
+        description: 'Gothic estate on north bluffs. Broken second-floor window.',
+        image_url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop',
+        status: 'verified',
+        color: 'aged',
+        position: { x: 560, y: 60 }
+      },
+      {
+        id: `card_loc_archive_${storyId}`,
+        story_id: storyId,
+        type: 'location',
+        title: 'The Whispering Archives & Lighthouse',
+        subtitle: 'Location • Chapter 3',
+        description: 'Subterranean stone vault beneath the Ravenscar beacon.',
+        image_url: 'https://images.unsplash.com/photo-1519074069444-1ba4ea16e6f5?q=80&w=800&auto=format&fit=crop',
+        status: 'verified',
+        color: 'aged',
+        position: { x: 840, y: 70 }
+      },
+      {
+        id: `card_loc_harbor_${storyId}`,
+        story_id: storyId,
+        type: 'location',
+        title: 'Ravenscar Maritime Harbor (Slip 4)',
+        subtitle: 'Location • Chapter 1',
+        description: 'Damp pier where anonymous courier delivered the salt-soaked watch.',
+        image_url: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=800&auto=format&fit=crop',
+        status: 'verified',
+        color: 'aged',
+        position: { x: 580, y: 320 }
+      }
+    ];
+
+    // Add characters
+    chars.forEach((c, idx) => {
+      elements.push({
+        id: `card_char_${c.id}`,
+        story_id: storyId,
+        type: 'character',
+        title: c.name,
+        subtitle: `${c.role} • ${c.current_status}`,
+        description: c.physical_description || c.backstory || 'Subject in inquiry.',
+        image_url: c.portrait_url || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop',
+        status: c.role.toLowerCase().includes('antagonist') ? 'suspect' : 'alive',
+        is_culprit: c.name.includes('Alistair'),
+        color: 'polaroid',
+        position: { x: 80 + idx * 220, y: 560 + (idx % 2 * 20) },
+        metadata: { character_id: c.id, role: c.role }
+      });
+    });
+
+    // Add evidence
+    elements.push(
+      {
+        id: `card_ev_watch_${storyId}`,
+        story_id: storyId,
+        type: 'evidence',
+        title: 'Waterlogged Pocket Watch',
+        subtitle: 'Evidence • Chapter 1',
+        description: 'Stopped precisely at 11:40 PM. Roman numerals encircle a concealed brass astronomical compass.',
+        image_url: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=800&auto=format&fit=crop',
+        status: 'verified',
+        color: 'aged',
+        position: { x: 80, y: 880 }
+      },
+      {
+        id: `card_ev_ledger_${storyId}`,
+        story_id: storyId,
+        type: 'evidence',
+        title: 'Forged Estate Ledger',
+        subtitle: 'Evidence • Chapter 2',
+        description: 'Records dating to 1892 reveal payments to Julian Calder signed under a forged Blackwood crest.',
+        image_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=800&auto=format&fit=crop',
+        status: 'verified',
+        color: 'aged',
+        position: { x: 340, y: 890 }
+      },
+      {
+        id: `card_ev_sigil_${storyId}`,
+        story_id: storyId,
+        type: 'evidence',
+        title: 'The Obsidian Sigil Key',
+        subtitle: 'Evidence • Chapter 3',
+        description: 'Carved volcanic glass pulsing faintly when brought near salt water.',
+        image_url: 'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?q=80&w=800&auto=format&fit=crop',
+        status: 'verified',
+        color: 'aged',
+        position: { x: 620, y: 880 }
+      }
+    );
+
+    // Timeline elements
+    timeline.slice(0, 3).forEach((ev, idx) => {
+      elements.push({
+        id: `card_time_${ev.id}`,
+        story_id: storyId,
+        type: 'event',
+        title: ev.title,
+        subtitle: `Timeline Chronology • Chapter ${ev.chapter_number || idx + 1}`,
+        description: ev.description,
+        status: 'verified',
+        color: 'manila',
+        position: { x: 1140, y: 80 + idx * 190 }
+      });
+    });
+
+    // Sticky notes
+    elements.push(
+      {
+        id: `card_sticky_meeting_${storyId}`,
+        story_id: storyId,
+        type: 'clue',
+        title: 'MEETING POINT X',
+        subtitle: 'Observation',
+        description: 'Wharf lights doused at 02:00 AM. Who signaled the skiff from south breakwater?',
+        color: 'yellow',
+        status: 'unverified',
+        position: { x: 350, y: 340 }
+      },
+      {
+        id: `card_sticky_drop_${storyId}`,
+        story_id: storyId,
+        type: 'clue',
+        title: 'DEAD DROP 5/12',
+        subtitle: 'Observation',
+        description: 'Iron locker under lighthouse pier. Check tide schedule before midnight attempt.',
+        color: 'pink',
+        status: 'unverified',
+        position: { x: 930, y: 350 }
+      }
+    );
+
+    const connections: InvestigationConnection[] = [
+      {
+        id: `conn_1_${storyId}`,
+        source_id: `card_loc_manor_${storyId}`,
+        target_id: `card_ev_watch_${storyId}`,
+        label: 'Tide coordinates match estate',
+        type: 'location'
+      },
+      {
+        id: `conn_2_${storyId}`,
+        source_id: `card_ev_ledger_${storyId}`,
+        target_id: `card_loc_manor_${storyId}`,
+        label: 'Recovered from conservatory desk',
+        type: 'evidence'
+      }
+    ];
+
+    if (chars.length > 0) {
+      connections.push({
+        id: `conn_char_ev_${storyId}`,
+        source_id: `card_char_${chars[0].id}`,
+        target_id: `card_ev_watch_${storyId}`,
+        label: 'Possesses the missing object',
+        type: 'evidence'
+      });
+    }
+
+    return {
+      story_id: storyId,
+      elements,
+      connections,
+      culprit_id: chars.find(c => c.name.includes('Alistair')) ? `card_char_${chars.find(c => c.name.includes('Alistair'))!.id}` : null,
+      zoom: 1.0,
+      pan_offset: { x: 0, y: 0 },
+      updated_at: new Date().toISOString()
+    };
   }
 
   // AI Co-writer

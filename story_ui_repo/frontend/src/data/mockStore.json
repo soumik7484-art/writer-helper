@@ -144,7 +144,7 @@
       "status": "completed",
       "created_at": "2026-11-12T19:04:10.689858",
       "updated_at": "2026-11-12T14:06:06.940923",
-      "content": "The rain fell against the leaded panes of 14 High Quay Street with the persistence of a dying pulse.\n\nSilas Vance adjusted the brass desk lamp, the wick sputtering as a draft slipped beneath the heavy oak door. Before him lay a couriers parcel\u2014rough butcher paper, bound with tarred hemp string, smelling unmistakably of brine and dead kelp.\n\nHe slit the twine with his silver folding knife.\n\nInside rested an antique pocket watch. Its heavy silver casing had been blackened by sea salt, the crystal cracked diagonally from the Roman numeral nine to four. The hands were seized at precisely 3:17. When Silas pried the rear casing open with the tip of his thumbnail, no pendulum hummed. Instead, engraved into the balance cock was a single word, cut with precision: REVERIE.\n\nTucked behind the escapement was a folded strip of parchment, stiffened by seawater. It bore no signature\u2014only six lines written in iron gall ink, and a wax seal stamped with the three-headed raven of House Blackwood.\n\nIf you value what remains of the harbor, Vance, do not let Alistair light the maritime lantern tonight.\n\nSilas stood, reaching for his wool overcoat and the Webley revolver in the top drawer. Ravenscar had buried many things beneath its cold cliffs, but tonight, the tide was coughing them back up.\n\nEvery detail of the surroundings seemed etched with quiet menace. The damp sea air clung to the stone walls, condensing into slow, bead-like droplets that trailed downward like silent tears. In the distance, the foghorn sounded at deliberate four-minute intervals\u2014a mournful iron groan that echoed across the jagged headland."
+      "content": "The rain fell against the leaded panes of 14 High Quay Street with the persistence of a dying pulse.\n\nSilas Vance adjusted the brass desk lamp, the wick sputtering as a draft slipped beneath the heavy oak door. Before him lay a couriers parcel—rough butcher paper, bound with tarred hemp string, smelling unmistakably of brine and dead kelp.\n\nHe slit the twine with his silver folding knife.\n\nInside rested an antique pocket watch. Its heavy silver casing had been blackened by sea salt, the crystal cracked diagonally from the Roman numeral nine to four. The hands were seized at precisely 3:17. When Silas pried the rear casing open with the tip of his thumbnail, no pendulum hummed. Instead, engraved into the balance cock was a single word, cut with precision: REVERIE.\n\nTucked behind the escapement was a folded strip of parchment, stiffened by seawater. It bore no signature—only six lines written in iron gall ink, and a wax seal stamped with the three-headed raven of House Blackwood.\n\nIf you value what remains of the harbor, Vance, do not let Alistair light the maritime lantern tonight.\n\nSilas stood, reaching for his wool overcoat and the Webley revolver in the top drawer. Ravenscar had buried many things beneath its cold cliffs, but tonight, the tide was coughing them back up.\n\nEvery detail of the surroundings seemed etched with quiet menace. The damp sea air clung to the stone walls, condensing into slow, bead-like droplets that trailed downward like silent tears. In the distance, the foghorn sounded at deliberate four-minute intervals—a mournful iron groan that echoed across the jagged headland."
     },
     "chap_02": {
       "id": "chap_02",
@@ -682,7 +682,6 @@
   },
   "boards": {
     "story_ravenscar_noir": {
-      "story_id": "story_ravenscar_noir",
       "positions": {
         "char_silas_vance": {
           "x": 60,
@@ -727,7 +726,556 @@
           "notes": "Conflicting claims over Ravenscar inheritance"
         }
       ],
+      "story_id": "story_ravenscar_noir",
       "updated_at": "2026-11-13T12:00:00.000Z"
     }
-  }
+  },
+  "investigation_boards": {
+    "story_ravenscar_noir": {
+      "story_id": "story_ravenscar_noir",
+      "elements": [
+        {
+          "id": "card_case_file_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "clue",
+          "title": "CASE DOSSIER: #NOIR",
+          "subtitle": "INVESTIGATION • MYSTERY",
+          "description": "INQUIRY TARGET: THE OBSIDIAN KEY OF RAVENSCAR\nSTATUS: ACTIVE INVESTIGATION\nAUTHORIZED: SILAS VANCE, P.I.",
+          "color": "aged",
+          "status": "verified",
+          "is_pinned": true,
+          "position": {
+            "x": 60,
+            "y": 60
+          },
+          "metadata": {
+            "category": "official_record"
+          }
+        },
+        {
+          "id": "card_sticky_surv_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "clue",
+          "title": "24/7 SURVEILLANCE ORDER",
+          "subtitle": "Night Watch Log",
+          "description": "Subject movements monitored at harbor slip 4. Keep distance. Do not engage until cipher key confirmed.",
+          "color": "yellow",
+          "status": "unverified",
+          "is_pinned": false,
+          "position": {
+            "x": 310,
+            "y": 70
+          },
+          "metadata": {
+            "observation": "Suspicious maritime activity"
+          }
+        },
+        {
+          "id": "card_loc_0_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "location",
+          "title": "Blackwood Cliffside Manor",
+          "subtitle": "Location • Chapter 1, Chapter 2",
+          "description": "Gothic estate situated upon the jagged north bluffs. Broken second-floor window and locked conservatory.",
+          "image_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "aged",
+          "position": {
+            "x": 560,
+            "y": 60
+          },
+          "metadata": {
+            "chapters": [
+              "Chapter 1",
+              "Chapter 2"
+            ],
+            "associated_characters": [
+              "Lord Alistair Blackwood",
+              "Lady Evelyn Blackwood"
+            ]
+          }
+        },
+        {
+          "id": "card_loc_1_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "location",
+          "title": "The Whispering Archives & Lighthouse",
+          "subtitle": "Location • Chapter 3",
+          "description": "Subterranean stone vault beneath the Ravenscar beacon. Decades of occult navigation charts.",
+          "image_url": "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=800&auto=format&fit=crop",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "aged",
+          "position": {
+            "x": 840,
+            "y": 70
+          },
+          "metadata": {
+            "chapters": [
+              "Chapter 3"
+            ],
+            "associated_characters": [
+              "Clara Moreau",
+              "Silas Vance"
+            ]
+          }
+        },
+        {
+          "id": "card_loc_2_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "location",
+          "title": "Ravenscar Maritime Harbor (Slip 4)",
+          "subtitle": "Location • Chapter 1",
+          "description": "Damp pier where the anonymous courier delivered the salt-soaked watch. High surveillance zone.",
+          "image_url": "https://images.unsplash.com/photo-1519074069444-1ba4ea16e6f5?q=80&w=800&auto=format&fit=crop",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "aged",
+          "position": {
+            "x": 580,
+            "y": 320
+          },
+          "metadata": {
+            "chapters": [
+              "Chapter 1"
+            ],
+            "associated_characters": [
+              "Julian Calder",
+              "Silas Vance"
+            ]
+          }
+        },
+        {
+          "id": "card_char_char_silas_vance",
+          "story_id": "story_ravenscar_noir",
+          "type": "character",
+          "title": "Silas Vance",
+          "subtitle": "Protagonist • Alive",
+          "description": "Tall, lean frame with broad shoulders; silvering dark hair, keen gray eyes, and a faint scar along his left jawline. Always wears an oilskin overcoat.",
+          "image_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600&auto=format&fit=crop",
+          "status": "Alive",
+          "is_culprit": false,
+          "is_pinned": false,
+          "color": "polaroid",
+          "position": {
+            "x": 80,
+            "y": 560
+          },
+          "metadata": {
+            "role": "Protagonist",
+            "personality_traits": [
+              "Methodical",
+              "Hyper-observant",
+              "Cynical",
+              "Quietly Compassionate"
+            ],
+            "first_appearance": "Chapter 1",
+            "character_id": "char_silas_vance",
+            "secrets": "Possesses a second matching watch given to him by an unknown officer during the Crimean war."
+          }
+        },
+        {
+          "id": "card_char_char_clara_moreau",
+          "story_id": "story_ravenscar_noir",
+          "type": "character",
+          "title": "Clara Moreau",
+          "subtitle": "Companion / Mentor • Alive",
+          "description": "Dark auburn hair pinned into a practical chignon, round brass spectacles, ink-stained fingers, wears high-collared tweed waistcoats.",
+          "image_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=600&auto=format&fit=crop",
+          "status": "Alive",
+          "is_culprit": false,
+          "is_pinned": false,
+          "color": "polaroid",
+          "position": {
+            "x": 310,
+            "y": 580
+          },
+          "metadata": {
+            "role": "Companion / Mentor",
+            "personality_traits": [
+              "Scholarly",
+              "Perceptive",
+              "Cautious",
+              "Resilient"
+            ],
+            "first_appearance": "Chapter 3",
+            "character_id": "char_clara_moreau",
+            "secrets": "Stole an original harbor survey ledger from the town hall vaults five years ago."
+          }
+        },
+        {
+          "id": "card_char_char_alistair_blackwood",
+          "story_id": "story_ravenscar_noir",
+          "type": "character",
+          "title": "Lord Alistair Blackwood",
+          "subtitle": "Antagonist • Alive",
+          "description": "Impeccably tailored morning coat, pale gaunt face, thinning blond hair, manicured mustache, nervous twitch in right hand.",
+          "image_url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=600&auto=format&fit=crop",
+          "status": "suspect",
+          "is_culprit": false,
+          "is_pinned": false,
+          "color": "polaroid",
+          "position": {
+            "x": 540,
+            "y": 560
+          },
+          "metadata": {
+            "role": "Antagonist",
+            "personality_traits": [
+              "Arrogant",
+              "Superstitious",
+              "Secretly Terrified",
+              "Manipulative"
+            ],
+            "first_appearance": "Chapter 2",
+            "character_id": "char_alistair_blackwood",
+            "secrets": "Drugged Evelyn on the night of her disappearance, though she subsequently escaped."
+          }
+        },
+        {
+          "id": "card_char_char_evelyn_blackwood",
+          "story_id": "story_ravenscar_noir",
+          "type": "character",
+          "title": "Lady Evelyn Blackwood",
+          "subtitle": "Foil / Mystery Inciter • Missing",
+          "description": "Raven hair, striking violet eyes, pale aristocratic complexion; left behind a torn silk emerald gown in her bedroom.",
+          "image_url": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop",
+          "status": "suspect",
+          "is_culprit": false,
+          "is_pinned": false,
+          "color": "polaroid",
+          "position": {
+            "x": 770,
+            "y": 580
+          },
+          "metadata": {
+            "role": "Foil / Mystery Inciter",
+            "personality_traits": [
+              "Courageous",
+              "Deceptive",
+              "Resourceful",
+              "Haunted"
+            ],
+            "first_appearance": "Referenced in Chapter 1",
+            "character_id": "char_evelyn_blackwood",
+            "secrets": "Is currently hiding in the abandoned salt cellar beneath the old smugglers pier."
+          }
+        },
+        {
+          "id": "card_time_evt_01",
+          "story_id": "story_ravenscar_noir",
+          "type": "event",
+          "title": "Delivery of the Salt-Soaked Watch",
+          "subtitle": "Timeline Chronology • Chapter 1",
+          "description": "An unidentified harbor boy delivers a waterlogged package to Silas Vance inquiry office at 14 High Quay Street. The rear casing contains the cipher REVERIE.",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "manila",
+          "position": {
+            "x": 1140,
+            "y": 80
+          },
+          "metadata": {
+            "chapter_number": 1,
+            "characters_involved": [
+              "Silas Vance"
+            ]
+          }
+        },
+        {
+          "id": "card_time_evt_02",
+          "story_id": "story_ravenscar_noir",
+          "type": "event",
+          "title": "Inspection of the Broken Bedroom",
+          "subtitle": "Timeline Chronology • Chapter 2",
+          "description": "Silas arrives at Blackwood Manor. Inside Lady Evelyn bedchamber, the French doors are shattered inward, and torn scraps of emerald silk are stuck on the iron balcony.",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "manila",
+          "position": {
+            "x": 1140,
+            "y": 270
+          },
+          "metadata": {
+            "chapter_number": 2,
+            "characters_involved": [
+              "Silas Vance",
+              "Lord Alistair Blackwood"
+            ]
+          }
+        },
+        {
+          "id": "card_time_evt_03",
+          "story_id": "story_ravenscar_noir",
+          "type": "event",
+          "title": "Alistairs Glass Spills",
+          "subtitle": "Timeline Chronology • Chapter 2",
+          "description": "During interrogation, Silas produces the pocket watch. Alistair experiences a visible panic attack and claims the key to that watch was buried with their father.",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "manila",
+          "position": {
+            "x": 1140,
+            "y": 460
+          },
+          "metadata": {
+            "chapter_number": 2,
+            "characters_involved": [
+              "Silas Vance",
+              "Lord Alistair Blackwood"
+            ]
+          }
+        },
+        {
+          "id": "card_time_evt_04",
+          "story_id": "story_ravenscar_noir",
+          "type": "event",
+          "title": "Uncovering the Granite Breakwater Blueprint",
+          "subtitle": "Timeline Chronology • Chapter 3",
+          "description": "Clara Moreau pulls the 1842 harbor survey ledgers. Six hundred tons of stone were removed from the reef, constructing a hidden subterranean chamber under the sea bed.",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "manila",
+          "position": {
+            "x": 1140,
+            "y": 650
+          },
+          "metadata": {
+            "chapter_number": 3,
+            "characters_involved": [
+              "Silas Vance",
+              "Clara Moreau"
+            ]
+          }
+        },
+        {
+          "id": "card_ev_0_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "evidence",
+          "title": "Waterlogged Pocket Watch",
+          "subtitle": "Evidence • Found in Chapter 1",
+          "description": "Stopped precisely at 11:40 PM. Roman numerals encircle a concealed brass astronomical compass.",
+          "image_url": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=800&auto=format&fit=crop",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "aged",
+          "position": {
+            "x": 80,
+            "y": 880
+          },
+          "metadata": {
+            "first_appearance": "Chapter 1",
+            "current_location": "Vance's Field Satchel",
+            "significance": "Key cipher for the submerged lighthouse chamber lock."
+          }
+        },
+        {
+          "id": "card_ev_1_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "evidence",
+          "title": "Forged Estate Ledger",
+          "subtitle": "Evidence • Found in Chapter 2",
+          "description": "Records dating to 1892 reveal payments to Julian Calder signed under a forged Blackwood crest.",
+          "image_url": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?q=80&w=800&auto=format&fit=crop",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "aged",
+          "position": {
+            "x": 360,
+            "y": 890
+          },
+          "metadata": {
+            "first_appearance": "Chapter 2",
+            "current_location": "Conservatory Desk",
+            "significance": "Establishes financial motive and maritime conspiracy."
+          }
+        },
+        {
+          "id": "card_ev_2_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "evidence",
+          "title": "The Obsidian Sigil Key",
+          "subtitle": "Evidence • Found in Chapter 3",
+          "description": "Carved volcanic glass pulsing faintly when brought near salt water. Unlocks the seventh sea vault.",
+          "image_url": "https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?q=80&w=800&auto=format&fit=crop",
+          "status": "verified",
+          "is_pinned": false,
+          "color": "aged",
+          "position": {
+            "x": 640,
+            "y": 880
+          },
+          "metadata": {
+            "first_appearance": "Chapter 3",
+            "current_location": "The Whispering Archives",
+            "significance": "Primary relic driving the occult society's agenda."
+          }
+        },
+        {
+          "id": "card_sticky_0_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "clue",
+          "title": "MEETING POINT X",
+          "subtitle": "Detective Observation",
+          "description": "Wharf lights doused at 02:00 AM. Who signaled the skiff from the south breakwater?",
+          "color": "yellow",
+          "status": "unverified",
+          "is_pinned": false,
+          "position": {
+            "x": 350,
+            "y": 340
+          },
+          "metadata": {
+            "mystery_note": true
+          }
+        },
+        {
+          "id": "card_sticky_1_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "clue",
+          "title": "DEAD DROP 5/12",
+          "subtitle": "Detective Observation",
+          "description": "Iron locker under lighthouse pier. Check tide schedule before midnight attempt.",
+          "color": "pink",
+          "status": "unverified",
+          "is_pinned": false,
+          "position": {
+            "x": 930,
+            "y": 350
+          },
+          "metadata": {
+            "mystery_note": true
+          }
+        },
+        {
+          "id": "card_sticky_2_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "clue",
+          "title": "WITNESS STATEMENT",
+          "subtitle": "Detective Observation",
+          "description": "Fisherman heard three chimes from the sunken bell. Insists Evelyn walked toward the cliffs willingly.",
+          "color": "green",
+          "status": "unverified",
+          "is_pinned": false,
+          "position": {
+            "x": 90,
+            "y": 330
+          },
+          "metadata": {
+            "mystery_note": true
+          }
+        },
+        {
+          "id": "card_sticky_3_story_ravenscar_noir",
+          "story_id": "story_ravenscar_noir",
+          "type": "clue",
+          "title": "PARKING / CARRIAGE TICKET",
+          "subtitle": "Detective Observation",
+          "description": "Cab driver paid with uncirculated 1888 sovereign. Matches Blackwood family vault mint.",
+          "color": "yellow",
+          "status": "unverified",
+          "is_pinned": false,
+          "position": {
+            "x": 960,
+            "y": 890
+          },
+          "metadata": {
+            "mystery_note": true
+          }
+        }
+      ],
+      "connections": [
+        {
+          "id": "conn_silas_watch_story_ravenscar_noir",
+          "source_id": "card_char_char_silas_vance",
+          "target_id": "card_ev_0_story_ravenscar_noir",
+          "label": "Possesses key cipher",
+          "type": "evidence",
+          "notes": "Delivered to Vance by anonymous harbor courier"
+        },
+        {
+          "id": "conn_silas_manor_story_ravenscar_noir",
+          "source_id": "card_char_char_silas_vance",
+          "target_id": "card_loc_0_story_ravenscar_noir",
+          "label": "Inspected crime scene",
+          "type": "location",
+          "notes": "Discovered broken conservatory window"
+        },
+        {
+          "id": "conn_ali_eve_story_ravenscar_noir",
+          "source_id": "card_char_char_alistair_blackwood",
+          "target_id": "card_char_char_evelyn_blackwood",
+          "label": "Conflicting alibi & timeline",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "notes": "Alistair claims she left voluntarily at midnight"
+        },
+        {
+          "id": "conn_ali_manor_story_ravenscar_noir",
+          "source_id": "card_char_char_alistair_blackwood",
+          "target_id": "card_loc_0_story_ravenscar_noir",
+          "label": "Sole resident present",
+          "type": "location",
+          "notes": "Staged disappearance inside the estate"
+        },
+        {
+          "id": "conn_clara_arch_story_ravenscar_noir",
+          "source_id": "card_char_char_clara_moreau",
+          "target_id": "card_loc_1_story_ravenscar_noir",
+          "label": "Decoded subterranean vault",
+          "type": "location",
+          "notes": "Discovered sea cave acoustic blueprints"
+        },
+        {
+          "id": "conn_ledger_ali_story_ravenscar_noir",
+          "source_id": "card_ev_1_story_ravenscar_noir",
+          "target_id": "card_char_char_alistair_blackwood",
+          "label": "Forged family signatures",
+          "type": "evidence",
+          "notes": "Extensive illicit payoffs logged"
+        },
+        {
+          "id": "conn_time_seq_0_story_ravenscar_noir",
+          "source_id": "card_time_evt_01",
+          "target_id": "card_time_evt_02",
+          "label": "Chronological progression",
+          "type": "timeline",
+          "notes": "Sequential investigation milestones"
+        },
+        {
+          "id": "conn_time_seq_1_story_ravenscar_noir",
+          "source_id": "card_time_evt_02",
+          "target_id": "card_time_evt_03",
+          "label": "Chronological progression",
+          "type": "timeline",
+          "notes": "Sequential investigation milestones"
+        },
+        {
+          "id": "conn_time_seq_2_story_ravenscar_noir",
+          "source_id": "card_time_evt_03",
+          "target_id": "card_time_evt_04",
+          "label": "Chronological progression",
+          "type": "timeline",
+          "notes": "Sequential investigation milestones"
+        },
+        {
+          "id": "conn_time1_watch_story_ravenscar_noir",
+          "source_id": "card_time_evt_01",
+          "target_id": "card_ev_0_story_ravenscar_noir",
+          "label": "Timepiece delivered at 11:40 PM",
+          "type": "timeline",
+          "notes": "Anchor timestamp for investigation"
+        }
+      ],
+      "culprit_id": "card_char_char_alistair_blackwood",
+      "zoom": 1.0,
+      "pan_offset": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "updated_at": "2026-11-13T15:31:06.269321"
+    }
+  },
+  "culprits": {}
 }

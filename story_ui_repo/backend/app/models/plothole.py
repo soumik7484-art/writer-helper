@@ -13,6 +13,9 @@ class PlotHoleCreate(BaseModel):
     current_conflicting_info: Optional[str] = ""
     source_chapters: Optional[List[str]] = []
     suggested_correction: Optional[str] = ""
+    continuity_impact: Optional[str] = ""
+    related_elements: Optional[List[str]] = []
+    related_element_ids: Optional[List[str]] = []
     status: Optional[str] = "open"
 
 class PlotHoleUpdate(BaseModel):
@@ -24,6 +27,9 @@ class PlotHoleUpdate(BaseModel):
     current_conflicting_info: Optional[str] = None
     source_chapters: Optional[List[str]] = None
     suggested_correction: Optional[str] = None
+    continuity_impact: Optional[str] = None
+    related_elements: Optional[List[str]] = None
+    related_element_ids: Optional[List[str]] = None
     status: Optional[str] = None
 
 class PlotHole(BaseModel):
@@ -37,6 +43,9 @@ class PlotHole(BaseModel):
     current_conflicting_info: str = ""
     source_chapters: List[str] = []
     suggested_correction: str = ""
+    continuity_impact: str = ""
+    related_elements: List[str] = []
+    related_element_ids: List[str] = []
     status: str = "open"
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())

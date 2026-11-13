@@ -140,15 +140,24 @@ export interface Memory {
   updated_at?: string;
 }
 
-export type PlotHoleSeverity = 'Critical' | 'Warning' | 'Suggestion';
+export type PlotHoleSeverity = 'Critical' | 'High' | 'Medium' | 'Low' | 'Warning' | 'Suggestion';
 export type PlotHoleCategory = 
   | 'character_inconsistency'
   | 'timeline_contradiction'
+  | 'missing_object'
+  | 'location_conflict'
   | 'location_inconsistency'
   | 'object_continuity_error'
   | 'personality_inconsistency'
+  | 'forgotten_storyline'
   | 'world_rule_violation'
-  | 'relationship_inconsistency';
+  | 'relationship_inconsistency'
+  | 'unexplained_appearance'
+  | 'unresolved_clue'
+  | 'contradictory_dialogue'
+  | 'universe_memory_contradiction';
+
+export type PlotHoleStatus = 'open' | 'under_review' | 'resolved' | 'ignored' | 'dismissed';
 
 export interface PlotHole {
   id: string;
@@ -161,8 +170,63 @@ export interface PlotHole {
   current_conflicting_info: string;
   source_chapters: string[];
   suggested_correction: string;
-  status: 'open' | 'resolved' | 'ignored';
+  continuity_impact?: string;
+  related_elements?: string[];
+  related_element_ids?: string[];
+  status: PlotHoleStatus;
   created_at?: string;
+  updated_at?: string;
+}
+
+export type BoardElementType = 'character' | 'location' | 'event' | 'evidence' | 'clue';
+export type CardColorTheme = 'polaroid' | 'aged' | 'manila' | 'yellow' | 'pink' | 'green' | 'blue' | 'red';
+export type CardStatusBadge = 'verified' | 'unverified' | 'suspect' | 'alive' | 'deceased' | 'missing' | 'open';
+
+export interface BoardCardPosition {
+  x: number;
+  y: number;
+}
+
+export interface InvestigationCard {
+  id: string;
+  story_id: string;
+  type: BoardElementType;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  image_url?: string;
+  status?: CardStatusBadge | string;
+  is_culprit?: boolean;
+  is_pinned?: boolean;
+  color?: CardColorTheme | string;
+  position: BoardCardPosition;
+  size?: { width?: number; height?: number };
+  metadata?: Record<string, any>;
+  has_issue?: boolean;
+  issue_ids?: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InvestigationConnection {
+  id: string;
+  source_id: string;
+  target_id: string;
+  label?: string;
+  type?: 'suspect' | 'contradiction' | 'timeline' | 'location' | 'evidence' | 'relation' | 'custom' | string;
+  notes?: string;
+  is_contradiction?: boolean;
+  issue_id?: string;
+  created_at?: string;
+}
+
+export interface InvestigationBoardState {
+  story_id: string;
+  elements: InvestigationCard[];
+  connections: InvestigationConnection[];
+  culprit_id?: string | null;
+  zoom?: number;
+  pan_offset?: { x: number; y: number };
   updated_at?: string;
 }
 

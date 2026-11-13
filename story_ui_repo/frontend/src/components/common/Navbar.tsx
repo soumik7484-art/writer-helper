@@ -119,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'characters', label: 'Dossiers', icon: Users, badge: null },
     { id: 'timeline', label: 'Story Timeline', icon: GitBranch, badge: 'KEY' },
     { id: 'memory', label: 'Universe Memory', icon: Brain, badge: null },
-    { id: 'plotholes', label: 'Plot Hole Audit', icon: AlertTriangle, badge: null },
+    { id: 'plotholes', label: 'Investigation Board', icon: AlertTriangle, badge: 'AI' },
     { id: 'studio', label: 'Writing Studio', icon: PenTool, badge: null },
     { id: 'intelligence', label: 'Intelligence', icon: Activity, badge: null },
   ];
