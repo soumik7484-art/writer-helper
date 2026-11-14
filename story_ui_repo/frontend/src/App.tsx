@@ -162,6 +162,68 @@ const MainContent: React.FC = () => {
     };
   }, []);
 
+  // Antique Fountain Pen Cursor System: Click State & Golden Ripple Effect
+  useEffect(() => {
+    let clickTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      // Preserve native typing/selection inside inputs, textareas, and manuscript editor
+      const target = e.target as HTMLElement | null;
+      const isEditable = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        target.closest('[contenteditable="true"]') ||
+        target.closest('.parchment-sheet') ||
+        target.closest('.manuscript-editor')
+      );
+
+      if (isEditable) return;
+
+      // Activate click-state fountain pen cursor briefly
+      document.body.classList.add('cursor-clicking');
+      if (clickTimeout) clearTimeout(clickTimeout);
+      clickTimeout = setTimeout(() => {
+        document.body.classList.remove('cursor-clicking');
+      }, 350);
+
+      // Spawn subtle antique golden ripple animation
+      try {
+        const ripple = document.createElement('div');
+        ripple.className = 'antique-gold-ripple';
+        ripple.style.left = `${e.clientX}px`;
+        ripple.style.top = `${e.clientY}px`;
+        document.body.appendChild(ripple);
+
+        const removeRipple = () => {
+          if (ripple.parentNode) {
+            ripple.parentNode.removeChild(ripple);
+          }
+        };
+
+        ripple.addEventListener('animationend', removeRipple, { once: true });
+        setTimeout(removeRipple, 500);
+      } catch (err) {
+        // Graceful fallback
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (clickTimeout) clearTimeout(clickTimeout);
+      document.body.classList.remove('cursor-clicking');
+    };
+
+    window.addEventListener('mousedown', handleMouseDown, true);
+    window.addEventListener('mouseup', handleMouseUp, true);
+
+    return () => {
+      if (clickTimeout) clearTimeout(clickTimeout);
+      window.removeEventListener('mousedown', handleMouseDown, true);
+      window.removeEventListener('mouseup', handleMouseUp, true);
+      document.body.classList.remove('cursor-clicking');
+    };
+  }, []);
+
   useEffect(() => {
     if (isStudioView && videoRef.current) {
       videoRef.current.defaultMuted = true;
@@ -293,11 +355,8 @@ export default function App() {
   return (
     <AppErrorBoundary>
       <StoryProvider>
-        <CursorProvider>
-          <CustomCursor />
-          <MainContent />
-          <PacingAlertModal />
-        </CursorProvider>
+        <MainContent />
+        <PacingAlertModal />
       </StoryProvider>
     </AppErrorBoundary>
   );
