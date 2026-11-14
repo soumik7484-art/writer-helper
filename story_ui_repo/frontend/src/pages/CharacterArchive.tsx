@@ -54,9 +54,9 @@ const RELATIONSHIP_PRESETS = [
   { label: 'Unknown Connection', type: 'unknown', icon: '❓' },
 ];
 
-const CARD_W = 148;
-const CARD_H = 188;
-const PIN_OFFSET_X = 74;
+const CARD_W = 164;
+const CARD_H = 196;
+const PIN_OFFSET_X = 82;
 const PIN_OFFSET_Y = 16;
 
 interface ErrorBoundaryProps {
@@ -815,6 +815,7 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
   const handleCardClick = (charId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (hasDraggedDistanceRef.current || isDraggingRef.current) return;
+    if (selectedCharacterId === charId) return;
 
     if (connectingSourceId) {
       if (connectingSourceId === charId) {
@@ -1669,15 +1670,15 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                         </p>
                       </div>
 
-                      {/* Card Hover Actions */}
-                      <div className="mt-2 pt-1.5 border-t border-[#D5CCBA] flex items-center justify-center gap-1.5 opacity-85 group-hover:opacity-100 transition-opacity">
+                      {/* Card Hover Actions - Balanced 3-column grid inside Polaroid border */}
+                      <div className="mt-2 pt-1.5 border-t border-[#D5CCBA] grid grid-cols-3 gap-1 px-0.5 opacity-90 group-hover:opacity-100 transition-opacity">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleStartConnection(char.id, e);
                           }}
-                          className="px-2 py-0.5 rounded bg-[#35251C] hover:bg-[#A82E25] text-[#E0B77D] hover:text-white text-[10px] font-typewriter font-bold uppercase transition-colors"
+                          className="px-1 py-1 rounded bg-[#35251C] hover:bg-[#A82E25] text-[#E0B77D] hover:text-white text-[9px] font-typewriter font-bold uppercase transition-colors flex items-center justify-center shadow-sm"
                           title="Tie red thread"
                         >
                           Link
@@ -1688,7 +1689,7 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                             e.stopPropagation();
                             handleCardClick(char.id, e);
                           }}
-                          className="px-2 py-0.5 rounded bg-[#D6C6A9] hover:bg-[#C49A61] text-[#231A13] text-[10px] font-typewriter font-bold uppercase transition-colors"
+                          className="px-1 py-1 rounded bg-[#D6C6A9] hover:bg-[#C49A61] text-[#231A13] text-[9px] font-typewriter font-bold uppercase transition-colors flex items-center justify-center shadow-sm"
                           title="Open full dossier file"
                         >
                           Dossier
@@ -1703,15 +1704,15 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                               handleMarkAsCulprit(char.id);
                             }
                           }}
-                          className={`px-2 py-0.5 rounded text-[10px] font-typewriter font-bold uppercase transition-all flex items-center space-x-1 shadow-sm ${
+                          className={`px-1 py-1 rounded text-[9px] font-typewriter font-bold uppercase transition-all flex items-center justify-center gap-0.5 shadow-sm ${
                             isCulprit
                               ? 'bg-[#B03A2E] text-white hover:bg-[#8F1D14] ring-1 ring-red-300'
                               : 'bg-[#2B1714] text-[#E5A8A3] hover:bg-[#B03A2E] hover:text-white border border-[#8C2E24]'
                           }`}
                           title={isCulprit ? "Remove culprit designation" : "Mark as primary culprit"}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full ${isCulprit ? 'bg-white' : 'bg-[#E74C3C]'}`} />
-                          <span>{isCulprit ? 'Culprit' : 'Mark'}</span>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCulprit ? 'bg-white' : 'bg-[#E74C3C]'}`} />
+                          <span className="truncate">{isCulprit ? 'Culprit' : 'Mark'}</span>
                         </button>
                       </div>
                     </div>

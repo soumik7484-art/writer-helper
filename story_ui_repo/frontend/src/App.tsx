@@ -15,6 +15,8 @@ import { ToastContainer } from './components/common/ToastContainer';
 import { SettingsModal } from './components/common/SettingsModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { PacingAlertModal } from './components/common/PacingAlertModal';
+
 // Global error boundary protecting the application from black screens
 class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: Error }> {
   constructor(props: { children: React.ReactNode }) {
@@ -99,27 +101,14 @@ const MainContent: React.FC = () => {
   useStory();
 
   // Check whether user requested the Studio view or the Landing Hero view
-  // Defensively defaults to true to prevent black screens on reload or in development
   const [isStudioView, setIsStudioView] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     const path = window.location.pathname.toLowerCase();
     const search = window.location.search.toLowerCase();
     const hash = window.location.hash.toLowerCase();
 
-    // Check if specifically requesting folio hero
-    if (path.includes('folio') || search.includes('folio') || hash.includes('folio')) {
-      return false;
-    }
-
-    try {
-      const saved = localStorage.getItem('storyweave_active_view');
-      if (saved === 'studio') return true;
-      if (saved === 'folio') return false;
-    } catch {}
-
-    // On Vite dev server or if query has studio/tab/character, show studio
+    // Check if specifically requesting studio
     if (
-      window.location.port === '5173' ||
       path.includes('studio') ||
       search.includes('studio') ||
       hash.includes('studio') ||
@@ -129,8 +118,8 @@ const MainContent: React.FC = () => {
       return true;
     }
 
-    // If static file server at root and not studio
-    if (path.endsWith('folio.html') || path === '/' || path === '') {
+    // Root paths or folio page always show the 3D Bookshop hero
+    if (path.endsWith('folio.html') || path === '/' || path === '' || path.includes('folio')) {
       return false;
     }
 
@@ -143,20 +132,7 @@ const MainContent: React.FC = () => {
       const search = window.location.search.toLowerCase();
       const hash = window.location.hash.toLowerCase();
 
-      if (path.includes('folio') || search.includes('folio') || hash.includes('folio')) {
-        setIsStudioView(false);
-        return;
-      }
-
-      try {
-        const saved = localStorage.getItem('storyweave_active_view');
-        if (saved === 'studio') {
-          setIsStudioView(true);
-        }
-      } catch {}
-
       if (
-        window.location.port === '5173' ||
         path.includes('studio') ||
         search.includes('studio') ||
         hash.includes('studio') ||
@@ -164,6 +140,8 @@ const MainContent: React.FC = () => {
         search.includes('character')
       ) {
         setIsStudioView(true);
+      } else if (path.endsWith('folio.html') || path === '/' || path === '' || path.includes('folio')) {
+        setIsStudioView(false);
       }
 
       // Sync tab & character selection from URL
@@ -247,10 +225,14 @@ const MainContent: React.FC = () => {
           loop
           playsInline
           className="w-full h-full object-cover"
-          src="./storyvideo.mp4"
+          src="./homevideo.mp4"
         >
-          <source src="./storyvideo.mp4" type="video/mp4" />
-          <source src="/storyvideo.mp4" type="video/mp4" />
+          <source src="./homevideo.mp4" type="video/mp4" />
+          <source src="./oooooooooooo.mp4" type="video/mp4" />
+          <source src="./home_studio.mp4" type="video/mp4" />
+          <source src="/homevideo.mp4" type="video/mp4" />
+          <source src="/oooooooooooo.mp4" type="video/mp4" />
+          <source src="./assets/homevideo.mp4" type="video/mp4" />
         </video>
         {/* Subtle dark overlay for contrast */}
         <div className="absolute inset-0 bg-[#0C0A08]/75 pointer-events-none" />
@@ -310,6 +292,7 @@ export default function App() {
     <AppErrorBoundary>
       <StoryProvider>
         <MainContent />
+        <PacingAlertModal />
       </StoryProvider>
     </AppErrorBoundary>
   );

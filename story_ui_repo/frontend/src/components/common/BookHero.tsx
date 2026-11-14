@@ -57,6 +57,20 @@ export const BookHero: React.FC<BookHeroProps> = ({ onContinue }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const wordmarkRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const [webglError, setWebglError] = React.useState(false);
+  const isNavigatingRef = useRef(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Guarantee seamless video autoplay across browsers
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+      videoRef.current.play().catch(() => {
+        // Fallback for strict browser autoplay permissions
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -76,7 +90,7 @@ export const BookHero: React.FC<BookHeroProps> = ({ onContinue }) => {
     // Renderer
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
       renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -84,7 +98,11 @@ export const BookHero: React.FC<BookHeroProps> = ({ onContinue }) => {
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       container.appendChild(renderer.domElement);
     } catch (e) {
-      console.warn("WebGL initialization prevented:", e);
+      console.warn("WebGL initialization prevented, using CSS 3D fallback:", e);
+      setWebglError(true);
+      if (wordmarkRef.current) {
+        wordmarkRef.current.style.opacity = '1';
+      }
       return;
     }
 
@@ -476,6 +494,10 @@ export const BookHero: React.FC<BookHeroProps> = ({ onContinue }) => {
   }, []);
 
   const handleEnterStudio = () => {
+    if (isNavigatingRef.current) return;
+    isNavigatingRef.current = true;
+    setTimeout(() => { isNavigatingRef.current = false; }, 2000);
+
     if (onContinue) {
       onContinue();
       return;
@@ -496,25 +518,77 @@ export const BookHero: React.FC<BookHeroProps> = ({ onContinue }) => {
         ['--fs' as string]: 'min(22vh, 11vw)'
       }}
     >
+      {/* 1. Looping Magical Ancient Library Background Video (Lowest Layer) */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <video
+          ref={videoRef}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover pointer-events-none"
+          src="./osososo.mp4"
+        >
+          <source src="./osososo.mp4" type="video/mp4" />
+          <source src="./storyvideo.mp4" type="video/mp4" />
+          <source src="/osososo.mp4" type="video/mp4" />
+          <source src="/storyvideo.mp4" type="video/mp4" />
+          <source src="./assets/osososo.mp4" type="video/mp4" />
+          <source src="./assets/storyvideo.mp4" type="video/mp4" />
+        </video>
+        {/* Subtle dark atmospheric vignette overlay for text readability without altering video colors */}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle at 50% 50%, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.52) 100%)'
+          }}
+        />
+      </div>
+
       {/* 3D WebGL Canvas */}
       <div 
         ref={containerRef} 
         className="absolute inset-0 z-[2] pointer-events-none" 
       />
 
-      {/* Wordmark (z 1) */}
+      {/* Fallback CSS 3D Display if WebGL fails */}
+      {webglError && (
+        <div className="absolute inset-0 z-[2] pointer-events-none flex items-center justify-center overflow-hidden">
+          <div className="flex gap-4 sm:gap-6 -rotate-6 scale-90 sm:scale-105 opacity-80 filter drop-shadow-[0_20px_35px_rgba(0,0,0,0.9)]">
+            {sheetACells.slice(0, 7).map((c, idx) => (
+              <div 
+                key={idx}
+                className="w-24 sm:w-36 h-36 sm:h-52 rounded-sm shadow-2xl p-2 sm:p-3 flex flex-col justify-between border border-white/20 transform hover:-translate-y-4 transition-transform duration-300"
+                style={{ backgroundColor: c.spine }}
+              >
+                <span className="text-[10px] sm:text-xs font-serif text-white/90 font-bold uppercase tracking-wider line-clamp-2">
+                  {c.title}
+                </span>
+                <span className="text-[9px] text-white/60 font-sans italic">
+                  {c.author}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Wordmark (z 1) - Ancient Wizard Calligraphy Manuscript Title */}
       <div 
         ref={wordmarkRef}
-        className="absolute left-0 w-full text-center z-[1] pointer-events-none"
+        className="absolute left-0 w-full text-center z-[1] pointer-events-none flex justify-center items-center"
         style={{
-          top: 'calc(46.5vh - var(--fs) * 0.8)'
+          top: 'calc(46.5vh - var(--fs) * 0.8 - clamp(42px, 4.8vh, 50px))'
         }}
       >
         <h1 
-          className="inline-block text-white font-normal whitespace-nowrap tracking-[-0.02em] leading-none"
+          className="inline-block font-normal whitespace-nowrap leading-none select-none transition-all duration-300"
           style={{
-            fontFamily: "'Libre Caslon Display', serif",
-            fontSize: 'var(--fs)'
+            color: '#F3E2C2',
+            fontFamily: "'Berkshire Swash', 'Cormorant Garamond', 'Playfair Display', cursive, serif",
+            fontSize: 'var(--fs)',
+            letterSpacing: '0.015em',
+            textShadow: '0 2px 14px rgba(243, 226, 194, 0.4), 0 0 28px rgba(196, 154, 97, 0.32), 0 0 55px rgba(196, 154, 97, 0.16), 0 3px 6px rgba(0, 0, 0, 0.85)'
           }}
         >
           StoryWeave AI

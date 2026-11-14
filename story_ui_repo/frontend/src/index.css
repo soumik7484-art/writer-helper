@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Berkshire+Swash&family=Cormorant+Garamond:ital,wght@1,600;1,700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -32,6 +34,26 @@
   ::-webkit-scrollbar-thumb:hover {
     background: #C49A61;
   }
+
+  /* Parchment Rich Text Editor Styles */
+  .parchment-sheet ul {
+    list-style-type: disc !important;
+    padding-left: 1.5rem !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .parchment-sheet ol {
+    list-style-type: decimal !important;
+    padding-left: 1.5rem !important;
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  .parchment-sheet li {
+    margin-bottom: 0.25rem;
+  }
+  .parchment-sheet p {
+    margin-bottom: 0.5rem;
+  }
 }
 
 /* Cross-browser scrollbar hiding for horizontal navigation bars */
@@ -60,6 +82,26 @@
     0 0 0 1px rgba(100, 75, 45, 0.35),
     inset 0 0 35px rgba(90, 65, 35, 0.22);
   position: relative;
+}
+
+/* 3D Book Stage & Physical Manuscript Styling */
+.book-stage-3d {
+  perspective: 1400px;
+  perspective-origin: center center;
+  transform-style: preserve-3d;
+}
+
+.book-stacked-edges {
+  box-shadow: 
+    3px 2px 0 #A69279,
+    6px 4px 0 #8D7962,
+    9px 6px 0 #6D5B46,
+    0 25px 45px -10px rgba(0, 0, 0, 0.85),
+    inset 0 0 35px rgba(90, 65, 35, 0.22);
+}
+
+.book-spine-crease {
+  background: linear-gradient(to right, rgba(45, 28, 15, 0.32) 0%, rgba(45, 28, 15, 0.14) 2.5%, rgba(45, 28, 15, 0.04) 6%, transparent 12%);
 }
 
 .parchment-subtle {

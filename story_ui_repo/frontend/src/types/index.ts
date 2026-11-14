@@ -178,7 +178,7 @@ export interface PlotHole {
   updated_at?: string;
 }
 
-export type BoardElementType = 'character' | 'location' | 'event' | 'evidence' | 'clue';
+export type BoardElementType = 'character' | 'location' | 'event' | 'evidence' | 'clue' | 'personality' | 'world_rule';
 export type CardColorTheme = 'polaroid' | 'aged' | 'manila' | 'yellow' | 'pink' | 'green' | 'blue' | 'red';
 export type CardStatusBadge = 'verified' | 'unverified' | 'suspect' | 'alive' | 'deceased' | 'missing' | 'open';
 

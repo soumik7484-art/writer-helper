@@ -6,14 +6,44 @@ node_modules/
 dist/
 */dist/
 
+# Python
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+*.py[cod]
+.venv/
+*/.venv/
+venv/
+*/venv/
+models_cache/
+*/models_cache/
+
 # Logs
 *.log
 npm-debug.log*
 
 # Environment & Temp
 .env
+.env.*
 .env.local
+.env*.local
+*.env
 scratch/
 scratch_story_ui_repo_git_backup/
 .DS_Store
 Thumbs.db
+
+# Vercel
+.vercel/
+/backend/
+/api/
+/opencode.json
+
+# Test snapshots & artifacts in root
+/*.png
+/*.cjs
+!/serve.cjs
+!/serve.js
+/preview_all.html
+/yoyoyoyo.mp4
+

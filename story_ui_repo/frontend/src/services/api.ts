@@ -694,12 +694,19 @@ class ApiService {
     try {
       return await this.request<InvestigationBoardState>(`/api/stories/${storyId}/investigation-board`);
     } catch {
-      // Local fallback with persistence in localStorage
+      // Local fallback with persistence in localStorage and rich mockStore
+      const storeBoard = (localStore.investigation_boards && (localStore.investigation_boards as any)[storyId]) as InvestigationBoardState | undefined;
       const saved = localStorage.getItem(`storyweave_investigation_board_${storyId}`);
       if (saved) {
         try {
-          return JSON.parse(saved);
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.elements) && parsed.elements.length >= (storeBoard?.elements?.length || 20)) {
+            return parsed;
+          }
         } catch {}
+      }
+      if (storeBoard) {
+        return storeBoard;
       }
       return this.generateFallbackInvestigationBoard(storyId);
     }

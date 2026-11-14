@@ -383,7 +383,7 @@
       "location": "Silas Vance Office, 14 High Quay St",
       "chapter_id": "chap_01",
       "chapter_number": 1,
-      "chronological_position": 1.0,
+      "chronological_position": 1,
       "status": "Completed",
       "consequences": [
         "Silas takes up the investigation",
@@ -405,7 +405,7 @@
       "location": "Blackwood Manor West Wing",
       "chapter_id": "chap_02",
       "chapter_number": 2,
-      "chronological_position": 2.0,
+      "chronological_position": 2,
       "status": "Completed",
       "consequences": [
         "Confirms Evelyn did not leave willingly",
@@ -427,7 +427,7 @@
       "location": "The Grand Conservatory, Blackwood Manor",
       "chapter_id": "chap_02",
       "chapter_number": 2,
-      "chronological_position": 3.0,
+      "chronological_position": 3,
       "status": "Completed",
       "consequences": [
         "Alistair is confirmed hiding crucial knowledge of the heirloom"
@@ -448,7 +448,7 @@
       "location": "Ravenscar Municipal Archives",
       "chapter_id": "chap_03",
       "chapter_number": 3,
-      "chronological_position": 4.0,
+      "chronological_position": 4,
       "status": "Current",
       "consequences": [
         "Target coordinates established for the midnight expedition"
@@ -468,7 +468,7 @@
       "location": "Municipal Archives",
       "chapter_id": "chap_03",
       "chapter_number": 3,
-      "chronological_position": 5.0,
+      "chronological_position": 5,
       "status": "Upcoming",
       "consequences": [
         "Warns of severe seismic repercussions if the vault is opened at low tide"
@@ -489,7 +489,7 @@
       "location": "North Reef Sea Caverns",
       "chapter_id": "chap_04",
       "chapter_number": 4,
-      "chronological_position": 6.0,
+      "chronological_position": 6,
       "status": "Upcoming",
       "consequences": [
         "Direct encounter with Lord Alistairs armed henchmen"
@@ -511,7 +511,7 @@
       "location": "The Submerged Sea Vault",
       "chapter_id": "chap_05",
       "chapter_number": 5,
-      "chronological_position": 7.0,
+      "chronological_position": 7,
       "status": "Locked",
       "consequences": [
         "The true nature of the family ancient bargain is laid bare"
@@ -531,7 +531,7 @@
       "location": "Primary Scene Location",
       "chapter_id": "chap_ac5f38e697",
       "chapter_number": 1,
-      "chronological_position": 1.0,
+      "chronological_position": 1,
       "status": "Current",
       "consequences": [
         "New investigative lead unlocked"
@@ -634,49 +634,153 @@
     "issue_01": {
       "id": "issue_01",
       "story_id": "story_ravenscar_noir",
-      "title": "Pocket Watch Key Contradiction",
-      "category": "object_continuity_error",
+      "title": "Pocket Watch Key & Movement Compartment Contradiction",
+      "category": "missing_object",
       "severity": "Critical",
-      "description": "Contradiction regarding the custody and existence of the reliquary key for the Blackwood watch.",
-      "previous_conflicting_info": "Chapter 1: Silas effortlessly opens the watch outer casing with his thumbnail at his desk.",
-      "current_conflicting_info": "Chapter 2: Lord Alistair swears under oath that the watch cannot be opened without a key that was buried with his father.",
+      "description": "Severe object state contradiction regarding the custody and physical locking mechanism of the salt-soaked Blackwood watch.",
+      "previous_conflicting_info": "Chapter 1: Silas effortlessly snaps open the watch casing with his thumbnail under the desk lamp, noting the gear numbers.",
+      "current_conflicting_info": "Chapter 2: Lord Alistair swears under oath that the watch reliquary cannot be unsealed without an obsidian key that was buried with his father.",
       "source_chapters": [
-        "Chapter 1",
-        "Chapter 2"
+        "Chapter 1: The Cipher on the Tide",
+        "Chapter 2: The Shadows of Blackwood Manor"
       ],
-      "suggested_correction": "Clarify that Silas only opened the outer watch casing, whereas the inner movement gear compartment requires the ancestral brass key.",
+      "continuity_impact": "Ruptures the physical logic of the primary mystery artifact. Readers cannot determine if Vance possesses the crucial clue or if the watch remains locked.",
+      "suggested_correction": "Clarify in Chapter 1 that Silas only opened the hinged exterior silver bezel, discovering the locked interior obsidian gear cylinder.",
+      "related_elements": [
+        "Waterlogged Pocket Watch",
+        "The Obsidian Sigil Key",
+        "Silas Vance",
+        "Lord Alistair Blackwood"
+      ],
       "status": "open"
     },
     "issue_02": {
       "id": "issue_02",
       "story_id": "story_ravenscar_noir",
-      "title": "Weather & Wave Height Inconsistency",
+      "title": "Temporal Paradox: Evelyn at Conservatory vs Window Fracture at 11:40 PM",
       "category": "timeline_contradiction",
-      "severity": "Warning",
-      "description": "Tidal timing discrepancy between Silas leaving his office and arriving at the Manor.",
-      "previous_conflicting_info": "Chapter 1: Silas notes the gale is blowing inland at low tide (3:17 AM).",
-      "current_conflicting_info": "Chapter 2: Lord Alistair describes his sister leaving by rowboat at 3:30 AM into raging 15-foot breaker waves that would have smashed any boat against the reef.",
+      "severity": "Critical",
+      "description": "Irreconcilable chronological conflict between the crime scene physical clock stoppage and Alistair's eyewitness alibi statement.",
+      "previous_conflicting_info": "Chapter 1: The grandfather clock on the landing was frozen at 11:40 PM when the stained-glass window was shattered by the gale.",
+      "current_conflicting_info": "Chapter 2: Alistair insists: 'Evelyn took her nightcap in the conservatory past midnight (12:15 AM) while the rain was at its peak.'",
       "source_chapters": [
-        "Chapter 1",
-        "Chapter 2"
+        "Chapter 1: The Cipher on the Tide",
+        "Chapter 2: The Shadows of Blackwood Manor"
       ],
-      "suggested_correction": "Have Silas point out this exact physical impossibility to Alistair during the conservatory confrontation to catch him in a deliberate lie.",
+      "continuity_impact": "Creates an impossible 35-minute physical paradox unless Alistair is deliberately perjuring himself to fabricate an alibi.",
+      "suggested_correction": "Have Vance explicitly challenge Alistair: 'Lord Alistair, either your parlor clock stopped early, or someone tampered with the conservatory chronometer.'",
+      "related_elements": [
+        "Lady Evelyn Blackwood",
+        "Lord Alistair Blackwood",
+        "Delivery of the Salt-Soaked Watch",
+        "Inspection of the Broken Bedroom"
+      ],
       "status": "open"
     },
     "issue_03": {
       "id": "issue_03",
       "story_id": "story_ravenscar_noir",
-      "title": "Lady Evelyn Dress Description",
+      "title": "Lady Evelyn's Disappearance & Emerald Silk Dress Contradiction",
       "category": "character_inconsistency",
-      "severity": "Suggestion",
-      "description": "Discrepancy in the color and fabric of Evelyn abandoned clothing.",
-      "previous_conflicting_info": "Chapter 2: Silas discovers torn scraps of emerald silk caught on the balcony railing.",
-      "current_conflicting_info": "Chapter 3: Clara recalls Evelyn wearing a dark wool traveling cape and sturdy boots on the afternoon before her vanishing.",
+      "severity": "High",
+      "description": "Direct contradiction in Lady Evelyn's physical description and attire during the night of the abduction.",
+      "previous_conflicting_info": "Chapter 1: The harbor watchman reported a woman fleeing into Slip 4 wearing an emerald silk evening gown with torn hem.",
+      "current_conflicting_info": "Chapter 2: The maid certifies under interrogation that Evelyn's emerald gown remained hanging in the armoire, untouched with tags on.",
       "source_chapters": [
-        "Chapter 2",
-        "Chapter 3"
+        "Chapter 1: The Cipher on the Tide",
+        "Chapter 2: The Shadows of Blackwood Manor"
       ],
-      "suggested_correction": "Add a line explaining that the emerald silk was a decoy planted in the bedroom to suggest an abduction from bed.",
+      "continuity_impact": "Confuses suspect identification; implies either a body double or an unverified decoy wearing duplicate garments.",
+      "suggested_correction": "Establish that Evelyn had ordered a duplicate masquerade gown from the seamstress in Chapter 1, which Silas uncovers in the wardrobe ledger.",
+      "related_elements": [
+        "Lady Evelyn Blackwood",
+        "Silas Vance",
+        "Ravenscar Maritime Harbor (Slip 4)"
+      ],
+      "status": "open"
+    },
+    "issue_04": {
+      "id": "issue_04",
+      "story_id": "story_ravenscar_noir",
+      "title": "Impossible Travel Time Between North Bluffs and Slip 4 Pier",
+      "category": "location_conflict",
+      "severity": "High",
+      "description": "Geographical impossibility: Carriage travel time between Blackwood Manor and the docks violates established distance.",
+      "previous_conflicting_info": "Chapter 2: The carriage ride from the North Bluffs down the rutted mud coastal road takes a minimum of forty-five minutes in fair weather.",
+      "current_conflicting_info": "Chapter 3: Alistair claims he left the cliffside manor at 11:50 PM and was seen by harbor night watchmen at Slip 4 by midnight (10 minutes later).",
+      "source_chapters": [
+        "Chapter 2: The Shadows of Blackwood Manor",
+        "Chapter 3: The Whispering Archives"
+      ],
+      "continuity_impact": "Breaks geographical credibility; readers mapping the coastline will immediately spot the impossible transit speed.",
+      "suggested_correction": "Introduce the forgotten funicular cliff-lift behind the carriage house, allowing rapid descent from the bluffs directly down to sea level.",
+      "related_elements": [
+        "Blackwood Cliffside Manor",
+        "Ravenscar Maritime Harbor (Slip 4)",
+        "Lord Alistair Blackwood"
+      ],
+      "status": "open"
+    },
+    "issue_05": {
+      "id": "issue_05",
+      "story_id": "story_ravenscar_noir",
+      "title": "Lord Alistair's Unexplained Psychological Composure Shift",
+      "category": "personality_inconsistency",
+      "severity": "Medium",
+      "description": "Sudden unexplained personality and demeanor shift without narrative justification.",
+      "previous_conflicting_info": "Chapter 2: Alistair is described as clinically paranoid, trembling uncontrollably, spilling brandy across the Persian rug in frenzied panic.",
+      "current_conflicting_info": "Chapter 3: Five minutes later, Alistair addresses the constabulary with cold, razor-sharp composure, exhibiting no tremors or signs of duress.",
+      "source_chapters": [
+        "Chapter 2: The Shadows of Blackwood Manor",
+        "Chapter 3: The Whispering Archives"
+      ],
+      "continuity_impact": "Undermines character behavioral authenticity, making the emotional stakes feel inconsistent and unearned.",
+      "suggested_correction": "Show Silas observing Alistair secretly swallowing a glass vial of medicinal tincture before the constables enter the parlor.",
+      "related_elements": [
+        "Lord Alistair Blackwood",
+        "Silas Vance"
+      ],
+      "status": "open"
+    },
+    "issue_06": {
+      "id": "issue_06",
+      "story_id": "story_ravenscar_noir",
+      "title": "Abandoned Mystery: The Sunken Midnight Bronze Bell of Slip 4",
+      "category": "forgotten_storyline",
+      "severity": "Low",
+      "description": "Major sensory foreshadowing introduced in the opening chapter with zero subsequent narrative payoff.",
+      "previous_conflicting_info": "Chapter 1: The harbor fisherman solemnly warns Vance of an underwater iron bell tolling beneath sixty fathoms of black water before high tide.",
+      "current_conflicting_info": "Chapters 2 & 3: Neither Silas nor Clara ever mentions or investigates the acoustic anomaly again despite operating directly on Slip 4.",
+      "source_chapters": [
+        "Chapter 1: The Cipher on the Tide"
+      ],
+      "continuity_impact": "Leaves an evocative gothic mystery thread completely dangling, frustrating readers who expected a supernatural or occult twist.",
+      "suggested_correction": "In Chapter 3, have Clara reveal that the bell is a submerged smuggler acoustic signal buoy activated by pneumatic tide pressure.",
+      "related_elements": [
+        "Ravenscar Maritime Harbor (Slip 4)",
+        "Clara Moreau"
+      ],
+      "status": "open"
+    },
+    "issue_07": {
+      "id": "issue_07",
+      "story_id": "story_ravenscar_noir",
+      "title": "Subterranean Whispering Archive Dry Vault Violates Storm Surge Sea-Level Rules",
+      "category": "world_rule_violation",
+      "severity": "Medium",
+      "description": "Violation of established environmental and architectural rules established in the world-building canon.",
+      "previous_conflicting_info": "Chapter 2: The fourteen-foot storm surge completely submerged the foundations of the lighthouse and drowned the lower cellar passages.",
+      "current_conflicting_info": "Chapter 3: The Whispering Archive vault floor, situated thirty feet beneath the beacon, is described as bone-dry with fine dust undisturbed.",
+      "source_chapters": [
+        "Chapter 2: The Shadows of Blackwood Manor",
+        "Chapter 3: The Whispering Archives"
+      ],
+      "continuity_impact": "Defies maritime physics and natural laws of coastal inundation unless occult brass seals or bilge pumps are explicitly mentioned.",
+      "suggested_correction": "Add dialogue from Clara noting the steady, rhythmic chugging of steam-driven brass bilge pumps working within the double granite vault walls.",
+      "related_elements": [
+        "The Whispering Archives & Lighthouse",
+        "Clara Moreau"
+      ],
       "status": "open"
     }
   },
@@ -794,7 +898,11 @@
               "Lord Alistair Blackwood",
               "Lady Evelyn Blackwood"
             ]
-          }
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_04"
+          ]
         },
         {
           "id": "card_loc_1_story_ravenscar_noir",
@@ -819,7 +927,11 @@
               "Clara Moreau",
               "Silas Vance"
             ]
-          }
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_07"
+          ]
         },
         {
           "id": "card_loc_2_story_ravenscar_noir",
@@ -844,7 +956,13 @@
               "Julian Calder",
               "Silas Vance"
             ]
-          }
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_03",
+            "issue_04",
+            "issue_06"
+          ]
         },
         {
           "id": "card_char_char_silas_vance",
@@ -931,7 +1049,13 @@
             "first_appearance": "Chapter 2",
             "character_id": "char_alistair_blackwood",
             "secrets": "Drugged Evelyn on the night of her disappearance, though she subsequently escaped."
-          }
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_02",
+            "issue_04",
+            "issue_05"
+          ]
         },
         {
           "id": "card_char_char_evelyn_blackwood",
@@ -960,7 +1084,12 @@
             "first_appearance": "Referenced in Chapter 1",
             "character_id": "char_evelyn_blackwood",
             "secrets": "Is currently hiding in the abandoned salt cellar beneath the old smugglers pier."
-          }
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_02",
+            "issue_03"
+          ]
         },
         {
           "id": "card_time_evt_01",
@@ -1068,7 +1197,11 @@
             "first_appearance": "Chapter 1",
             "current_location": "Vance's Field Satchel",
             "significance": "Key cipher for the submerged lighthouse chamber lock."
-          }
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_01"
+          ]
         },
         {
           "id": "card_ev_1_story_ravenscar_noir",
@@ -1110,7 +1243,11 @@
             "first_appearance": "Chapter 3",
             "current_location": "The Whispering Archives",
             "significance": "Primary relic driving the occult society's agenda."
-          }
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_01"
+          ]
         },
         {
           "id": "card_sticky_0_story_ravenscar_noir",
@@ -1183,6 +1320,42 @@
           "metadata": {
             "mystery_note": true
           }
+        },
+        {
+          "id": "card_psych_alistair",
+          "story_id": "story_ravenscar_noir",
+          "type": "personality",
+          "title": "PSYCH PROFILE: Lord Alistair",
+          "subtitle": "Subject • Behavioral Duress",
+          "description": "Subject exhibits acute manic paranoia followed by cold emotional detachment. Chemical influence suspected.",
+          "status": "suspect",
+          "color": "aged",
+          "position": {
+            "x": 540,
+            "y": 340
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_05"
+          ]
+        },
+        {
+          "id": "card_codex_storm_rules",
+          "story_id": "story_ravenscar_noir",
+          "type": "world_rule",
+          "title": "COASTAL HYDRODYNAMICS AXIOM",
+          "subtitle": "World Law • Sea Surge Canon",
+          "description": "Lighthouse subterranean chambers below 10 fathoms must incur water seepage during high spring tides.",
+          "status": "verified",
+          "color": "manila",
+          "position": {
+            "x": 840,
+            "y": 340
+          },
+          "has_issue": true,
+          "issue_ids": [
+            "issue_07"
+          ]
         }
       ],
       "connections": [
@@ -1266,13 +1439,76 @@
           "label": "Timepiece delivered at 11:40 PM",
           "type": "timeline",
           "notes": "Anchor timestamp for investigation"
+        },
+        {
+          "id": "conn_contra_01",
+          "source_id": "card_ev_0_story_ravenscar_noir",
+          "target_id": "card_ev_2_story_ravenscar_noir",
+          "label": "Missing Key Compartment Contradiction",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "issue_id": "issue_01"
+        },
+        {
+          "id": "conn_contra_02",
+          "source_id": "card_char_char_alistair_blackwood",
+          "target_id": "card_char_char_evelyn_blackwood",
+          "label": "Temporal Alibi Paradox (11:40 PM vs 12:15 AM)",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "issue_id": "issue_02"
+        },
+        {
+          "id": "conn_contra_03",
+          "source_id": "card_char_char_evelyn_blackwood",
+          "target_id": "card_loc_2_story_ravenscar_noir",
+          "label": "Emerald Silk Dress Contradiction",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "issue_id": "issue_03"
+        },
+        {
+          "id": "conn_contra_04",
+          "source_id": "card_loc_0_story_ravenscar_noir",
+          "target_id": "card_loc_2_story_ravenscar_noir",
+          "label": "Impossible Carriage Transit Speed",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "issue_id": "issue_04"
+        },
+        {
+          "id": "conn_contra_05",
+          "source_id": "card_char_char_alistair_blackwood",
+          "target_id": "card_psych_alistair",
+          "label": "Sudden Emotional Composure Fracture",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "issue_id": "issue_05"
+        },
+        {
+          "id": "conn_contra_06",
+          "source_id": "card_loc_2_story_ravenscar_noir",
+          "target_id": "card_sticky_0_story_ravenscar_noir",
+          "label": "Abandoned Midnight Bronze Bell Inquiry",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "issue_id": "issue_06"
+        },
+        {
+          "id": "conn_contra_07",
+          "source_id": "card_loc_1_story_ravenscar_noir",
+          "target_id": "card_codex_storm_rules",
+          "label": "Sea Surge Hydrodynamic Rule Violation",
+          "type": "contradiction",
+          "is_contradiction": true,
+          "issue_id": "issue_07"
         }
       ],
       "culprit_id": "card_char_char_alistair_blackwood",
-      "zoom": 1.0,
+      "zoom": 1,
       "pan_offset": {
-        "x": 0.0,
-        "y": 0.0
+        "x": 0,
+        "y": 0
       },
       "updated_at": "2026-11-13T15:31:06.269321"
     }

@@ -108,6 +108,10 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
+  const [expandedDossierIssue, setExpandedDossierIssue] = useState<PlotHole | null>(null);
+  const [tilt, setTilt] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const targetTiltRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const animFrameRef = useRef<number | null>(null);
 
   // Active filters and views
   const [activeTypeFilter, setActiveTypeFilter] = useState<string>('all');
@@ -162,7 +166,10 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
   const isHistoryUpdateRef = useRef<boolean>(false);
 
   // Hover state for highlighting connected cluster
+  // Hover state for highlighting connected cluster and foreground elevation
   const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
+  const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null);
+  const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
 
   // Debounce save timer
   const saveTimerRef = useRef<any>(null);
@@ -719,7 +726,8 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
   const selectedIssue = issues.find(i => i.id === selectedIssueId);
 
   // Connected ids for currently focused card (selected or hovered)
-  const activeFocusCardId = selectedCardId || hoveredCardId;
+  // Connected ids for currently focused card (selected or culprit focus)
+  const activeFocusCardId = selectedCardId || (highlightCulpritOnly ? boardState.culprit_id : null);
   const activeConnectedIds = activeFocusCardId ? getConnectedElementIds(activeFocusCardId) : [];
 
   // Statistics
@@ -1188,12 +1196,356 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
             }}
           >
 
+                        {/* -------------------------------------------------------------------
+                LAYER 3: CHARACTER CARDS & EVIDENCE CARDS
+                Resting: zIndex 20, translateZ(20px)
+                Hovered: zIndex 100, translateZ(48px) -> Brought to front above threads (30) and pins (40)
+                Selected: zIndex 90, translateZ(38px)
+                Dragging: zIndex 120, translateZ(60px)
+                ------------------------------------------------------------------- */}
+            {boardState.elements.map(card => {
+              const isSelected = selectedCardId === card.id;
+              const isDragging = draggingCardId === card.id;
+              const isHovered = hoveredCardId === card.id;
+              const isCulprit = card.is_culprit || card.id === boardState.culprit_id;
+              const isConnected = activeConnectedIds.includes(card.id);
+              const isFocused = isSelected || isConnected;
+              const isDimmed = activeFocusCardId !== null && !isFocused && activeFocusCardId !== card.id;
+
+              // Find matching PlotHole issue
+              const matchingIssue = issues.find(i => 
+                card.issue_ids?.includes(i.id) || 
+                i.related_elements?.some(r => card.title.toLowerCase().includes(r.toLowerCase())) ||
+                (card.title.toLowerCase().includes('pocket watch') && i.category === 'missing_object') ||
+                (card.title.toLowerCase().includes('obsidian') && i.category === 'missing_object') ||
+                (card.title.toLowerCase().includes('alistair') && (i.category === 'timeline_contradiction' || i.category === 'personality_inconsistency')) ||
+                (card.title.toLowerCase().includes('evelyn') && (i.category === 'timeline_contradiction' || i.category === 'character_inconsistency')) ||
+                (card.title.toLowerCase().includes('harbor') && (i.category === 'location_conflict' || i.category === 'forgotten_storyline')) ||
+                (card.title.toLowerCase().includes('archives') && i.category === 'world_rule_violation')
+              );
+              const hasIssue = Boolean(card.has_issue || matchingIssue);
+
+              // Distinct physical card backgrounds based on type
+              let cardContainerStyle = 'bg-[#F5EFE4] text-[#1E1712] border-2 border-[#D1C2A5]'; // Polaroid / Neutral
+              if (card.type === 'event') cardContainerStyle = 'bg-[#FAF7EE] text-[#1D1711] border border-[#C5B7A0]'; // Lined Index Card
+              if (card.type === 'evidence') cardContainerStyle = 'bg-[#DFCEB3] text-[#241A12] border-2 border-[#8C7558]'; // Manila Luggage Tag
+              if (card.type === 'location') cardContainerStyle = 'bg-[#D2C5AC] text-[#1C1610] border-2 border-[#7A6447]'; // Nautical Blueprint Map
+              if (card.type === 'personality') cardContainerStyle = 'bg-[#E8DECE] text-[#221A12] border-2 border-[#7A644D]'; // Psych Evaluation
+              if (card.type === 'world_rule') cardContainerStyle = 'bg-[#EFE5D0] text-[#1F1710] border-2 border-[#8A7156]'; // Codex Parchment
+              if (card.type === 'clue') {
+                if (card.color === 'yellow') cardContainerStyle = 'bg-[#FFF9C4] text-[#221B0F] border border-[#D4C379]';
+                else if (card.color === 'pink') cardContainerStyle = 'bg-[#FCE4EC] text-[#2E1620] border border-[#D69EA9]';
+                else if (card.color === 'green') cardContainerStyle = 'bg-[#E8F5E9] text-[#132B16] border border-[#97B899]';
+                else cardContainerStyle = 'bg-[#FFF9C4] text-[#221B0F] border border-[#D4C379]';
+              }
+
+              const cardZIndex = isDragging ? 120 : isHovered ? 100 : isSelected ? 90 : 20;
+              const cardTranslateZ = isDragging
+                ? 'translateZ(60px)'
+                : isHovered
+                ? 'translateZ(48px)'
+                : isSelected
+                ? 'translateZ(38px)'
+                : 'translateZ(20px)';
+
+              return (
+                <div
+                  key={card.id}
+                  id={`card_${card.id}`}
+                  data-card-id={card.id}
+                  onMouseDown={(e) => handleCardMouseDown(e, card)}
+                  onMouseEnter={() => {
+                    setHoveredCardId(card.id);
+                    setHoveredConnectionId(null);
+                  }}
+                  onMouseLeave={() => setHoveredCardId(prev => (prev === card.id ? null : prev))}
+                  className={`investigation-card absolute rounded select-none group cursor-grab active:cursor-grabbing transition-all duration-200 ${cardContainerStyle} ${
+                    isDimmed ? 'opacity-35 grayscale-[50%]' : 'opacity-100'
+                  } ${
+                    isSelected ? 'ring-4 ring-[#C49A61]' : ''
+                  }`}
+                  style={{
+                    left: `${card.position.x}px`,
+                    top: `${card.position.y}px`,
+                    width: `${CARD_WIDTH + 14}px`,
+                    minHeight: `${CARD_HEIGHT}px`,
+                    transformStyle: 'preserve-3d',
+                    transform: cardTranslateZ,
+                    boxShadow: isHovered || isSelected
+                      ? '0 26px 48px -8px rgba(0,0,0,0.85), 0 14px 24px -5px rgba(0,0,0,0.7)'
+                      : '0 12px 28px -5px rgba(0,0,0,0.7), 0 6px 12px -4px rgba(0,0,0,0.5)',
+                    zIndex: cardZIndex,
+                  }}
+                >
+                  {/* Corner Masking Tape Graphic */}
+                  <div className="absolute -top-2 -left-2 w-7 h-3.5 bg-[#E6D7B8]/80 border border-[#C2B18E] -rotate-45 shadow-sm pointer-events-none z-30" />
+
+                  {/* Card Actions Overlay on Hover */}
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTogglePin(card.id);
+                      }}
+                      className="p-1 rounded bg-[#18130E]/80 text-[#C49A61] hover:text-white transition-colors"
+                      title={card.is_pinned ? 'Unpin card' : 'Pin card to corkboard'}
+                    >
+                      {card.is_pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleVerified(card.id);
+                      }}
+                      className="p-1 rounded bg-[#18130E]/80 text-[#C49A61] hover:text-white transition-colors"
+                      title="Toggle Verified Stamp"
+                    >
+                      <UserCheck className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteCard(card.id);
+                      }}
+                      className="p-1 rounded bg-[#18130E]/80 text-red-400 hover:text-red-200 transition-colors"
+                      title="Incinerate card"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* ── CARD CONTENT SWITCHER FOR THE 7 CATEGORIES ── */}
+                  <div className="p-3 pt-4 flex flex-col justify-between h-full">
+                    
+                    {/* 1. CHARACTER PROFILE (Polaroid Aesthetic) */}
+                    {card.type === 'character' && (
+                      <div className="space-y-2">
+                        {card.image_url ? (
+                          <div className="relative w-full h-28 overflow-hidden rounded bg-[#1C1612] border border-[#2B2016]/40 shadow-inner group/photo">
+                            <img
+                              src={card.image_url}
+                              alt={card.title}
+                              className="w-full h-full object-cover grayscale contrast-125 transition-transform group-hover/photo:scale-105"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-sepia/20 pointer-events-none" />
+                          </div>
+                        ) : (
+                          <div className="w-full h-24 rounded bg-[#DCD2C0] border border-[#8C7558] flex items-center justify-center text-3xl text-[#5A4533]">
+                            👤
+                          </div>
+                        )}
+                        <div className="pt-1">
+                          <h4 className="font-['Caveat'] text-xl font-bold text-[#1C150F] leading-tight drop-shadow-sm">
+                            {card.title}
+                          </h4>
+                          <span className="font-typewriter text-[9px] text-[#7A6451] uppercase tracking-widest block font-bold">
+                            {card.subtitle || 'SUSPECT DOSSIER'}
+                          </span>
+                          {card.description && (
+                            <p className="font-serif text-[11px] text-[#3D3024] leading-snug line-clamp-2 mt-1">
+                              {card.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. TIMELINE CHRONOLOGY CARD (Lined Index Card) */}
+                    {card.type === 'event' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between pb-1 border-b-2 border-red-800/40 font-typewriter text-[9px] font-bold text-[#8A2B20] tracking-wider uppercase">
+                          <span>CHRONOLOGY EVIDENCE</span>
+                          <span>{card.subtitle || 'EVENT'}</span>
+                        </div>
+                        <h4 className="font-typewriter text-xs font-bold text-[#1A140E] leading-tight">
+                          {card.title}
+                        </h4>
+                        {card.description && (
+                          <p className="font-serif text-[11px] text-[#2E2218] leading-relaxed line-clamp-4 italic bg-[#F2EDE0]/60 p-2 rounded border border-[#C5B7A0]/40">
+                            "{card.description}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 3. MISSING OBJECT RELIC TAG (Manila Baggage Tag) */}
+                    {card.type === 'evidence' && (
+                      <div className="space-y-2">
+                        <div className="w-6 h-6 rounded-full bg-[#A88B5E] border-2 border-[#543F24] mx-auto flex items-center justify-center shadow-inner -mt-1">
+                          <div className="w-2.5 h-2.5 rounded-full bg-[#1E1712]" />
+                        </div>
+                        <div className="text-center border-b border-[#8C7558]/40 pb-1">
+                          <span className="px-2 py-0.5 rounded bg-[#8A2B20] text-white font-typewriter text-[8px] font-bold uppercase tracking-wider">
+                            EXHIBIT #NOIR-{card.id.slice(-4).toUpperCase()}
+                          </span>
+                        </div>
+                        <h4 className="font-serif text-xs font-bold text-[#1A140E] text-center leading-tight">
+                          {card.title}
+                        </h4>
+                        {card.description && (
+                          <p className="font-typewriter text-[10px] text-[#3E3022] leading-tight line-clamp-3">
+                            {card.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 4. LOCATION EVIDENCE (Nautical Blueprint Map) */}
+                    {card.type === 'location' && (
+                      <div className="space-y-2">
+                        {card.image_url ? (
+                          <div className="relative w-full h-24 overflow-hidden rounded border border-[#52412E] bg-black/40">
+                            <img src={card.image_url} alt="" className="w-full h-full object-cover contrast-125 sepia-[35%]" />
+                          </div>
+                        ) : (
+                          <div className="w-full h-16 rounded bg-[#B8A686] border border-[#6B5539] flex items-center justify-center text-xl text-[#3D2E1C]">
+                            📍
+                          </div>
+                        )}
+                        <div>
+                          <div className="flex items-center justify-between font-typewriter text-[8px] text-[#6B5541] uppercase tracking-wider pb-0.5">
+                            <span>COORDINATES MAP</span>
+                            <span className="text-[#8A2B20] font-bold">LAT 54°22'N</span>
+                          </div>
+                          <h4 className="font-serif text-xs font-bold text-[#1C150F] leading-tight">
+                            {card.title}
+                          </h4>
+                          {card.description && (
+                            <p className="font-serif text-[10px] text-[#4A3D30] leading-snug line-clamp-2 mt-0.5">
+                              {card.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 5. PERSONALITY & DEVELOPMENT (Psych Profile) */}
+                    {card.type === 'personality' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between pb-1 border-b border-[#7A644D]/50 font-typewriter text-[8px] font-bold text-[#634E3A] uppercase tracking-wider">
+                          <span>PSYCH EVALUATION</span>
+                          <span className="text-red-700 font-bold">FRACTURE DETECTED</span>
+                        </div>
+                        <h4 className="font-serif text-xs font-bold text-[#1C150E] leading-tight">
+                          {card.title}
+                        </h4>
+                        {card.description && (
+                          <p className="font-typewriter text-[10px] text-[#2C2117] leading-relaxed line-clamp-4 bg-[#DFD3C2]/50 p-1.5 rounded">
+                            {card.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 6. WORLD RULE CODEX (Arcanum Canon Parchment) */}
+                    {card.type === 'world_rule' && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between pb-1 border-b border-[#8A7156]/50">
+                          <span className="font-cinzel text-[9px] font-bold text-[#6E4F32] uppercase tracking-wider">
+                            ESTABLISHED AXIOM
+                          </span>
+                          <span className="text-xs">⚜</span>
+                        </div>
+                        <h4 className="font-cinzel text-xs font-bold text-[#1C150E] leading-tight">
+                          {card.title}
+                        </h4>
+                        {card.description && (
+                          <p className="font-serif text-[10px] text-[#3A2D20] leading-relaxed line-clamp-4 italic">
+                            "{card.description}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 7. CLUE & UNRESOLVED STORYLINE (Lined Legal Pad Note) */}
+                    {card.type === 'clue' && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between font-typewriter text-[8px] text-[#63503E] uppercase tracking-wider border-b border-[#63503E]/20 pb-0.5">
+                          <span>CASE MEMO</span>
+                          <span>{card.subtitle || 'UNRESOLVED'}</span>
+                        </div>
+                        <h4 className="font-serif text-xs font-bold text-[#1A140E] leading-tight">
+                          {card.title}
+                        </h4>
+                        {card.description && (
+                          <p className="font-['Caveat'] text-sm text-[#1C1610] leading-tight line-clamp-4">
+                            {card.description}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── CARD FOOTER STAMPS & ACTIONS ── */}
+                    <div className="mt-3 pt-2 border-t border-[#3D3023]/25 flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
+                        {isCulprit ? (
+                          <span className="px-2 py-0.5 rounded bg-red-800 text-white text-[9px] font-cinzel font-bold tracking-wider shadow">
+                            PRIME CULPRIT
+                          </span>
+                        ) : (
+                          <span className="font-typewriter text-[9px] text-[#6B5541]">
+                            #{card.id.slice(-4).toUpperCase()}
+                          </span>
+                        )}
+
+                        {card.status && (
+                          <span className={`px-1.5 py-0.5 rounded text-[8px] font-typewriter font-bold uppercase border ${
+                            card.status === 'verified'
+                              ? 'bg-emerald-900/30 text-emerald-900 border-emerald-700/60'
+                              : card.status === 'suspect'
+                              ? 'bg-red-950/40 text-red-900 border-red-700/60 font-bold'
+                              : 'bg-amber-900/20 text-amber-900 border-amber-700/40'
+                          }`}>
+                            {card.status}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Prominent EXAMINE CONTRADICTION button on cards with continuity flags */}
+                      {hasIssue && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (matchingIssue) {
+                              setExpandedDossierIssue(matchingIssue);
+                            } else if (card.issue_ids?.[0]) {
+                              const direct = issues.find(i => i.id === card.issue_ids?.[0]);
+                              if (direct) setExpandedDossierIssue(direct);
+                            }
+                            sound.playTypewriterKeystroke();
+                          }}
+                          className="w-full mt-1 py-1 px-2 rounded bg-[#8A2B20] hover:bg-[#A83228] text-white text-[9px] font-typewriter font-bold uppercase tracking-wider flex items-center justify-center gap-1 shadow-md transition-transform hover:scale-105 active:scale-95"
+                          title="Open full evidence examination dossier"
+                        >
+                          <AlertTriangle className="w-3 h-3 text-amber-300" />
+                          <span>Examine Contradiction</span>
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+                </div>
+              );
+            })}
+
             {/* -------------------------------------------------------------------
-                SVG LAYER: RED STRING RELATIONSHIP SYSTEM & CIRCULAR MARKERS
+                LAYER 4: RED INVESTIGATION THREAD LINES
+                Resting: zIndex 30, translateZ(28px) -> In foreground of resting cards (zIndex 20)
+                Hovered connection: zIndex 110 -> Brought to front on hover with glow & label
                 ------------------------------------------------------------------- */}
             <svg
-              className="absolute inset-0 pointer-events-none z-0"
-              style={{ width: '4000px', height: '3000px' }}
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                width: '4000px',
+                height: '3000px',
+                zIndex: hoveredConnectionId ? 110 : 30,
+                transform: 'translateZ(28px)'
+              }}
             >
               <defs>
                 {/* Glow filter for contradiction strings */}
@@ -1230,9 +1582,13 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                 const midY = (y1 + y2) / 2 + sag;
 
                 const isSelected = selectedConnectionId === conn.id;
+                const isConnHovered = hoveredConnectionId === conn.id;
                 const isContradiction = conn.is_contradiction || conn.type === 'contradiction';
                 const isHighlighted =
                   isSelected ||
+                  isConnHovered ||
+                  hoveredCardId === conn.source_id ||
+                  hoveredCardId === conn.target_id ||
                   activeFocusCardId === conn.source_id ||
                   activeFocusCardId === conn.target_id ||
                   selectedIssue?.related_elements?.some(r =>
@@ -1243,13 +1599,24 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                 const stringPath = `M ${x1} ${y1} Q ${midX} ${midY} ${x2} ${y2}`;
 
                 return (
-                  <g key={conn.id} className="cursor-pointer pointer-events-auto">
-                    {/* Invisible wide hit area for easy clicking */}
+                  <g
+                    key={conn.id}
+                    className="cursor-pointer pointer-events-auto"
+                    onMouseEnter={() => {
+                      if (!hoveredCardId) {
+                        setHoveredConnectionId(conn.id);
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredConnectionId(prev => (prev === conn.id ? null : prev));
+                    }}
+                  >
+                    {/* Invisible wide hit area for easy clicking & hovering */}
                     <path
                       d={stringPath}
                       fill="none"
                       stroke="transparent"
-                      strokeWidth="24"
+                      strokeWidth="26"
                       onClick={(e) => {
                         e.stopPropagation();
                         setSelectedConnectionId(conn.id);
@@ -1264,7 +1631,7 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                       d={stringPath}
                       fill="none"
                       stroke="rgba(0,0,0,0.6)"
-                      strokeWidth={isHighlighted ? 4 : 2.5}
+                      strokeWidth={isHighlighted ? 4.5 : 2.5}
                       transform="translate(1, 4)"
                     />
 
@@ -1272,14 +1639,14 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                     <path
                       d={stringPath}
                       fill="none"
-                      stroke={isContradiction ? '#E53E3E' : '#B81D13'}
-                      strokeWidth={isHighlighted ? 3.5 : isContradiction ? 2.8 : 2.2}
+                      stroke={isConnHovered ? '#FF3B30' : isContradiction ? '#E53E3E' : '#B81D13'}
+                      strokeWidth={isHighlighted ? 3.8 : isContradiction ? 2.8 : 2.2}
                       strokeDasharray={isContradiction ? '6,4' : undefined}
                       filter={isHighlighted ? 'url(#crimsonGlow)' : undefined}
                       className="transition-all duration-150"
                     />
 
-                    {/* Optional String Relationship Label */}
+                    {/* String Relationship Label */}
                     {conn.label && (
                       <g
                         transform={`translate(${midX}, ${midY})`}
@@ -1296,14 +1663,14 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                           height="20"
                           rx="4"
                           fill="#18130E"
-                          stroke={isContradiction ? '#E53E3E' : isHighlighted ? '#C49A61' : '#3E3123'}
-                          strokeWidth="1"
-                          className="shadow-md"
+                          stroke={isConnHovered ? '#FF3B30' : isContradiction ? '#E53E3E' : isHighlighted ? '#C49A61' : '#3E3123'}
+                          strokeWidth={isConnHovered || isHighlighted ? '2' : '1'}
+                          className="shadow-md transition-all"
                         />
                         <text
                           y="3"
                           textAnchor="middle"
-                          fill={isContradiction ? '#FEB2B2' : isHighlighted ? '#F4EDE2' : '#C9B99B'}
+                          fill={isConnHovered ? '#FFFFFF' : isContradiction ? '#FEB2B2' : isHighlighted ? '#F4EDE2' : '#C9B99B'}
                           fontSize="10"
                           fontFamily="'Courier Prime', monospace"
                           fontWeight="bold"
@@ -1328,12 +1695,22 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                   strokeDasharray="4,4"
                 />
               )}
+            </svg>
 
-              {/* -----------------------------------------------------------------
-                  RED CIRCULAR HAND-DRAWN MARKERS (Inspired by reference image!)
-                  - Marker for designated CULPRIT
-                  - Marker for cards flagged by selected Plot Hole Issue
-                  ----------------------------------------------------------------- */}
+            {/* -----------------------------------------------------------------
+                LAYER 5A: RED CIRCULAR HAND-DRAWN MARKERS & CULPRIT RUBBER STAMPS
+                Resting: zIndex 42, translateZ(34px) -> Foreground above Threads (30) & Resting Cards (20)
+                Hovered: zIndex 115
+                ----------------------------------------------------------------- */}
+            <svg
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                width: '4000px',
+                height: '3000px',
+                zIndex: hoveredMarkerId ? 115 : 42,
+                transform: 'translateZ(34px)'
+              }}
+            >
               {boardState.elements.map(card => {
                 const isCulprit = card.is_culprit || card.id === boardState.culprit_id;
                 const isIssueTarget = selectedIssue?.related_elements?.some(r =>
@@ -1346,9 +1723,20 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                 const cy = card.position.y + CARD_HEIGHT / 2;
                 const rx = CARD_WIDTH / 2 + 18;
                 const ry = CARD_HEIGHT / 2 + 18;
+                const isMarkerHovered = hoveredMarkerId === card.id || hoveredCardId === card.id;
 
                 return (
-                  <g key={`marker_${card.id}`} className="pointer-events-none">
+                  <g
+                    key={`marker_${card.id}`}
+                    className="pointer-events-auto cursor-pointer"
+                    onMouseEnter={() => setHoveredMarkerId(card.id)}
+                    onMouseLeave={() => setHoveredMarkerId(prev => (prev === card.id ? null : prev))}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCardId(card.id);
+                      sound.playPaperRustle();
+                    }}
+                  >
                     {/* Glowing outer aura */}
                     <ellipse
                       cx={cx}
@@ -1358,7 +1746,7 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                       fill="none"
                       stroke={isCulprit ? '#C53030' : '#DD6B20'}
                       strokeWidth="2"
-                      opacity="0.3"
+                      opacity={isMarkerHovered ? 0.6 : 0.3}
                       filter="url(#crimsonGlow)"
                     />
                     {/* Hand-drawn organic sketched red loop */}
@@ -1370,10 +1758,10 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                       `}
                       fill="none"
                       stroke={isCulprit ? '#E53E3E' : '#ED8936'}
-                      strokeWidth={isCulprit ? '4' : '3'}
+                      strokeWidth={isCulprit ? (isMarkerHovered ? '5' : '4') : (isMarkerHovered ? '4' : '3')}
                       strokeLinecap="round"
                       filter="url(#crimsonGlow)"
-                      className="animate-pulse"
+                      className={isCulprit ? "animate-pulse" : ""}
                     />
 
                     {/* CULPRIT Rubber Stamp Label */}
@@ -1385,10 +1773,11 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
                           width="100"
                           height="24"
                           rx="3"
-                          fill="#741B1B"
+                          fill={isMarkerHovered ? "#8E1D1D" : "#741B1B"}
                           stroke="#E53E3E"
                           strokeWidth="2"
                           transform="rotate(-4)"
+                          className="shadow-lg transition-colors"
                         />
                         <text
                           y="4"
@@ -1409,186 +1798,87 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
               })}
             </svg>
 
-            {/* -------------------------------------------------------------------
-                CARD NODES LAYER (Draggable, Selectable, Editable Cards)
-                ------------------------------------------------------------------- */}
+            {/* -----------------------------------------------------------------
+                LAYER 5B: PUSHPINS & RED CULPRIT PINS
+                Resting: zIndex 40 / 45 (Culprit) -> Above Layer 4 Threads (30) & Layer 3 Cards (20)
+                Hovered/Selected: zIndex 105 -> Moves to front with the card
+                ----------------------------------------------------------------- */}
             {boardState.elements.map(card => {
               const isSelected = selectedCardId === card.id;
+              const isHovered = hoveredCardId === card.id;
               const isDragging = draggingCardId === card.id;
               const isCulprit = card.is_culprit || card.id === boardState.culprit_id;
-              const isConnected = activeConnectedIds.includes(card.id);
-              const isFocused = isSelected || isConnected;
-              const isDimmed = activeFocusCardId !== null && !isFocused && activeFocusCardId !== card.id;
+              const hasIssue = Boolean(card.has_issue);
 
-              // Card background styling based on type and color theme
-              let cardBg = 'bg-[#EADBC8] text-[#221A12] border-[#8C7456]'; // Polaroid / Aged default
-              if (card.color === 'yellow') cardBg = 'bg-[#FFF9C4] text-[#2A2312] border-[#D4C379]'; // Yellow sticky note
-              if (card.color === 'pink') cardBg = 'bg-[#FCE4EC] text-[#331822] border-[#D69EA9]'; // Pink sticky note
-              if (card.color === 'green') cardBg = 'bg-[#E8F5E9] text-[#142C16] border-[#97B899]'; // Green sticky note
-              if (card.color === 'manila') cardBg = 'bg-[#DFD2BE] text-[#241A12] border-[#8C7456]'; // Manila folder
-              if (card.color === 'aged') cardBg = 'bg-[#D6C4A6] text-[#291F16] border-[#7F674A]';
+              const pinX = card.position.x + PIN_OFFSET_X;
+              const pinY = card.position.y + PIN_OFFSET_Y;
+
+              const pinZIndex = isDragging
+                ? 125
+                : (isHovered || hoveredMarkerId === card.id)
+                ? 105
+                : isSelected
+                ? 95
+                : isCulprit
+                ? 45
+                : 40;
+
+              const pinTranslateZ = (isHovered || isSelected || isDragging) ? 'translateZ(70px)' : 'translateZ(36px)';
 
               return (
                 <div
-                  key={card.id}
-                  id={`card_${card.id}`}
-                  onMouseDown={(e) => handleCardMouseDown(e, card)}
-                  onMouseEnter={() => setHoveredCardId(card.id)}
-                  onMouseLeave={() => setHoveredCardId(null)}
-                  className={`investigation-card absolute rounded shadow-2xl transition-shadow select-none group cursor-grab active:cursor-grabbing ${cardBg} ${
-                    isDimmed ? 'opacity-35 grayscale-[50%]' : 'opacity-100'
-                  } ${
-                    isSelected ? 'ring-4 ring-[#C49A61] shadow-2xl scale-[1.02]' : 'hover:shadow-2xl'
-                  }`}
-                  style={{
-                    left: `${card.position.x}px`,
-                    top: `${card.position.y}px`,
-                    width: `${CARD_WIDTH}px`,
-                    minHeight: `${CARD_HEIGHT}px`,
-                    zIndex: isDragging ? 50 : isSelected ? 40 : 20,
+                  key={`pin_${card.id}`}
+                  id={`pin_${card.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (connectingSourceId === card.id) {
+                      setConnectingSourceId(null);
+                    } else if (connectingSourceId) {
+                      setConnectionLabelModal({
+                        sourceId: connectingSourceId,
+                        targetId: card.id,
+                        label: 'Investigative Link',
+                        type: 'relation'
+                      });
+                      setConnectingSourceId(null);
+                    } else {
+                      setConnectingSourceId(card.id);
+                      addToast('String Anchor Selected', `Click another card's pushpin to tie a red string.`, 'info');
+                    }
                   }}
+                  onMouseEnter={() => setHoveredCardId(card.id)}
+                  onMouseLeave={() => setHoveredCardId(prev => (prev === card.id ? null : prev))}
+                  className="absolute cursor-pointer group/pin pointer-events-auto"
+                  style={{
+                    left: `${pinX}px`,
+                    top: `${pinY}px`,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: pinZIndex,
+                    filter: 'drop-shadow(2px 5px 6px rgba(0,0,0,0.85))',
+                    transition: 'transform 0.2s ease, z-index 0.2s ease',
+                  }}
+                  title={isCulprit ? "Prime Culprit Pin - Click to tie red string" : "Pushpin Anchor - Click to tie red string"}
                 >
-                  {/* Metallic Pushpin on Top */}
                   <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (connectingSourceId === card.id) {
-                        setConnectingSourceId(null);
-                      } else {
-                        setConnectingSourceId(card.id);
-                        addToast('String Anchor Selected', `Click another card's pushpin to tie a red string.`, 'info');
-                      }
-                    }}
-                    className={`absolute -top-3.5 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full cursor-pointer flex items-center justify-center transition-transform hover:scale-125 z-30 shadow-lg ${
+                    className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform group-hover/pin:scale-125 border ${
                       connectingSourceId === card.id
                         ? 'bg-red-600 ring-4 ring-red-400 animate-bounce'
                         : isCulprit
-                        ? 'bg-gradient-to-br from-red-500 to-red-800 ring-2 ring-red-300'
-                        : 'bg-gradient-to-br from-[#E2B774] via-[#C49A61] to-[#805B23] ring-1 ring-amber-200'
+                        ? 'bg-gradient-to-br from-red-500 via-red-700 to-red-950 border-red-300 ring-2 ring-red-500/80 shadow-[0_0_12px_rgba(229,62,62,0.8)]'
+                        : hasIssue
+                        ? 'bg-gradient-to-br from-amber-400 via-red-600 to-red-900 border-amber-200 ring-2 ring-red-500/50'
+                        : 'bg-gradient-to-br from-[#F5D79E] via-[#C49A61] to-[#6E4B1F] border-[#FFE8BD]'
                     }`}
-                    title="Click to tie or connect red string"
+                    style={{
+                      transform: pinTranslateZ,
+                    }}
                   >
-                    <div className="w-2.5 h-2.5 rounded-full bg-white/60" />
-                  </div>
-
-                  {/* Corner Masking Tape Graphic */}
-                  <div className="absolute -top-2 -left-2 w-7 h-3.5 bg-[#E6D7B8]/80 border border-[#C2B18E] -rotate-45 shadow-sm pointer-events-none" />
-
-                  {/* Card Actions Overlay on Hover */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTogglePin(card.id);
-                      }}
-                      className="p-1 rounded bg-[#18130E]/80 text-[#C49A61] hover:text-white transition-colors"
-                      title={card.is_pinned ? 'Unpin card' : 'Pin card to corkboard'}
-                    >
-                      {card.is_pinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleVerified(card.id);
-                      }}
-                      className="p-1 rounded bg-[#18130E]/80 text-[#C49A61] hover:text-white transition-colors"
-                      title="Toggle Verified Stamp"
-                    >
-                      <UserCheck className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCard(card.id);
-                      }}
-                      className="p-1 rounded bg-[#18130E]/80 text-red-400 hover:text-red-200 transition-colors"
-                      title="Incinerate card"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Card Body Content */}
-                  <div className="p-3 pt-4 flex flex-col justify-between h-full">
-                    
-                    {/* Header tags: Type + Status */}
-                    <div className="flex items-center justify-between border-b border-[#3D3023]/20 pb-1.5 mb-2">
-                      <span className="font-typewriter text-[9px] font-bold uppercase tracking-wider text-[#7A362E]">
-                        {card.type}
-                      </span>
-                      {card.status && (
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[8px] font-typewriter font-bold uppercase border ${
-                            card.status === 'verified'
-                              ? 'bg-emerald-900/30 text-emerald-800 border-emerald-700/50'
-                              : card.status === 'suspect'
-                              ? 'bg-red-950/40 text-red-800 border-red-700/50'
-                              : 'bg-amber-900/20 text-amber-800 border-amber-700/40'
-                          }`}
-                        >
-                          {card.status}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Photograph (Polaroid style) */}
-                    {card.image_url && (
-                      <div className="relative w-full h-28 mb-2.5 overflow-hidden rounded bg-[#1C1612] border border-[#2B2016]/40 shadow-inner group/photo">
-                        <img
-                          src={card.image_url}
-                          alt={card.title}
-                          className="w-full h-full object-cover grayscale contrast-125 transition-transform group-hover/photo:scale-105"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-sepia/20 pointer-events-none" />
-                      </div>
-                    )}
-
-                    {/* Titles */}
-                    <div className="flex-1">
-                      <h4 className="font-serif text-sm font-bold text-[#1C150F] leading-tight mb-0.5">
-                        {card.title}
-                      </h4>
-                      {card.subtitle && (
-                        <p className="font-typewriter text-[10px] text-[#5A4533] italic mb-1.5">
-                          {card.subtitle}
-                        </p>
-                      )}
-                      {card.description && (
-                        <p className="font-handwriting text-xs text-[#2A2016] leading-snug line-clamp-3">
-                          {card.description}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Footer Stamps & Indicators */}
-                    <div className="mt-2.5 pt-2 border-t border-[#3D3023]/20 flex items-center justify-between">
-                      {isCulprit ? (
-                        <span className="px-2 py-0.5 rounded bg-red-800 text-white text-[9px] font-cinzel font-bold tracking-wider">
-                          CULPRIT
-                        </span>
-                      ) : (
-                        <span className="font-typewriter text-[9px] text-[#6B5541]">
-                          ID: #{card.id.slice(-4).toUpperCase()}
-                        </span>
-                      )}
-
-                      {card.has_issue && (
-                        <span className="flex items-center gap-1 text-[9px] font-typewriter font-bold text-[#A82E25]">
-                          <AlertTriangle className="w-3 h-3 text-[#A82E25]" />
-                          Continuity Flag
-                        </span>
-                      )}
-                    </div>
-
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/80 absolute top-1 left-1.5 blur-[0.2px]" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-black/40" />
                   </div>
                 </div>
               );
             })}
-
           </div>
 
           {/* Quick Corkboard Overlay Controls (Zoom, Fit, Legend) */}
@@ -2310,6 +2600,208 @@ export const InvestigationBoard: React.FC<InvestigationBoardProps> = ({
         )}
       </AnimatePresence>
 
-    </div>
+          {/* -----------------------------------------------------------------------
+          EXPANDED EVIDENCE EXAMINATION DOSSIER MODAL (Full Detective Investigation File)
+          ----------------------------------------------------------------------- */}
+      <AnimatePresence>
+        {expandedDossierIssue && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="max-w-4xl w-full bg-[#18130E] border-2 border-[#8C6F48] rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.95)] overflow-hidden flex flex-col my-auto max-h-[92vh]"
+            >
+              {/* Folder Top Header Bar */}
+              <div className="h-14 px-6 bg-[#221A13] border-b border-[#3E3022] flex items-center justify-between shrink-0">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-full bg-[#8A2B20]/30 border border-[#8A2B20] flex items-center justify-center text-[#E5A8A3] text-sm">
+                    🔍
+                  </div>
+                  <div>
+                    <span className="font-typewriter text-[10px] text-[#C49A61] font-bold tracking-[0.25em] uppercase block">
+                      CONFIDENTIAL ARCHIVE • CASE FILE #{expandedDossierIssue.id.toUpperCase()}
+                    </span>
+                    <h2 className="font-serif text-lg font-bold text-[#F4EDE2] truncate max-w-lg">
+                      {expandedDossierIssue.title}
+                    </h2>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`px-2.5 py-1 rounded text-[10px] font-typewriter font-bold uppercase tracking-wider border ${
+                    expandedDossierIssue.severity === 'Critical'
+                      ? 'bg-red-950 text-red-300 border-red-700 animate-pulse'
+                      : expandedDossierIssue.severity === 'High'
+                      ? 'bg-amber-950 text-amber-300 border-amber-700'
+                      : 'bg-[#2A2016] text-[#C9B99B] border-[#4E3925]'
+                  }`}>
+                    {expandedDossierIssue.severity} Severity
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setExpandedDossierIssue(null)}
+                    className="p-1.5 rounded-lg text-[#8C7A65] hover:text-[#F4EDE2] hover:bg-[#2A2016] transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Dossier Body Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                
+                {/* 1. Category & Narrative Impact */}
+                <div className="p-4 rounded-xl bg-[#241A14] border border-[#3E2E20] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-typewriter">
+                    <span className="text-[#C49A61] font-bold uppercase tracking-wider">
+                      INVESTIGATION CATEGORY: {expandedDossierIssue.category.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-[#8C7A65] uppercase">
+                      STATUS: {expandedDossierIssue.status}
+                    </span>
+                  </div>
+                  <p className="font-serif text-sm text-[#F0E6D8] leading-relaxed">
+                    {expandedDossierIssue.description}
+                  </p>
+                  {expandedDossierIssue.continuity_impact && (
+                    <div className="pt-2 border-t border-[#3E2E20] text-xs font-typewriter text-[#E5A8A3]">
+                      <span className="font-bold text-[#C49A61] uppercase mr-1.5">Narrative Continuity Impact:</span>
+                      {expandedDossierIssue.continuity_impact}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Side-by-Side Canon Conflict Analysis */}
+                <div className="space-y-2">
+                  <span className="font-typewriter text-xs text-[#C49A61] font-bold uppercase tracking-wider block">
+                    CANON EVIDENCE COMPARISON
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Left: Prior Canon */}
+                    <div className="p-4 rounded-xl bg-[#17221A] border-2 border-[#2E5E3D] space-y-2">
+                      <div className="flex items-center justify-between pb-1 border-b border-[#2E5E3D]/50">
+                        <span className="font-typewriter text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                          📜 PRIOR ESTABLISHED CANON
+                        </span>
+                        <span className="font-serif text-[11px] text-[#A8D5B8]">
+                          {expandedDossierIssue.source_chapters?.[0] || 'Earlier Canon'}
+                        </span>
+                      </div>
+                      <p className="font-serif text-xs text-[#D8EEDB] italic leading-relaxed">
+                        "{expandedDossierIssue.previous_conflicting_info}"
+                      </p>
+                    </div>
+
+                    {/* Right: Contradicting Scene */}
+                    <div className="p-4 rounded-xl bg-[#281514] border-2 border-[#8A2B20] space-y-2">
+                      <div className="flex items-center justify-between pb-1 border-b border-[#8A2B20]/50">
+                        <span className="font-typewriter text-[10px] text-red-400 font-bold uppercase tracking-wider">
+                          🚨 CONTRADICTING SCENE
+                        </span>
+                        <span className="font-serif text-[11px] text-[#E5A8A3]">
+                          {expandedDossierIssue.source_chapters?.[1] || expandedDossierIssue.source_chapters?.[0] || 'Current Chapter'}
+                        </span>
+                      </div>
+                      <p className="font-serif text-xs text-[#FADBD8] italic leading-relaxed bg-[#3B1A18]/60 p-2 rounded border border-[#8A2B20]/40">
+                        "{expandedDossierIssue.current_conflicting_info}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. AI Detective's Suggested Literary Resolution */}
+                <div className="p-4 rounded-xl bg-[#2A2016] border border-[#C49A61]/50 space-y-2 shadow-inner">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-400 text-sm">💡</span>
+                    <span className="font-typewriter text-xs text-[#F3D4A0] font-bold uppercase tracking-wider">
+                      SUGGESTED LITERARY RESOLUTION
+                    </span>
+                  </div>
+                  <p className="font-serif text-xs text-[#EADBC8] leading-relaxed italic">
+                    "{expandedDossierIssue.suggested_correction}"
+                  </p>
+                </div>
+
+                {/* 4. Related Elements & Suspects */}
+                {expandedDossierIssue.related_elements && expandedDossierIssue.related_elements.length > 0 && (
+                  <div className="space-y-1.5">
+                    <span className="font-typewriter text-[10px] text-[#8C7A65] font-bold uppercase tracking-wider block">
+                      CONNECTED INVESTIGATION SUBJECTS
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {expandedDossierIssue.related_elements.map((elem, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            const matchedCard = boardState.elements.find(c => c.title.toLowerCase().includes(elem.toLowerCase()));
+                            if (matchedCard) {
+                              focusOnElements([matchedCard.id]);
+                              setSelectedCardId(matchedCard.id);
+                              setExpandedDossierIssue(null);
+                            }
+                          }}
+                          className="px-3 py-1 rounded-full bg-[#201712] border border-[#3E2E20] hover:border-[#C49A61] text-[#E0D7C7] hover:text-white font-serif text-xs transition-colors flex items-center gap-1.5"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          <span>{elem}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Dossier Action Footer */}
+              <div className="p-4 bg-[#1C1612] border-t border-[#3E3022] flex flex-wrap items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-2">
+                  {onNavigateToStudio && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const chap = expandedDossierIssue.source_chapters?.[0];
+                        setExpandedDossierIssue(null);
+                        onNavigateToStudio(chap);
+                      }}
+                      className="px-4 py-2 rounded-lg bg-[#C49A61] hover:bg-[#D6AB72] text-[#14100D] font-typewriter text-xs font-bold uppercase transition-transform hover:scale-105 shadow flex items-center gap-2"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Open in Writing Studio</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleUpdateIssueStatus(expandedDossierIssue.id, expandedDossierIssue.status === 'resolved' ? 'open' : 'resolved');
+                      setExpandedDossierIssue(prev => prev ? { ...prev, status: prev.status === 'resolved' ? 'open' : 'resolved' } : null);
+                    }}
+                    className={`px-4 py-2 rounded-lg font-typewriter text-xs font-bold uppercase transition-colors flex items-center gap-2 border ${
+                      expandedDossierIssue.status === 'resolved'
+                        ? 'bg-[#2A2016] text-[#E0D7C7] border-[#4E3925]'
+                        : 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-200 border-emerald-700/60'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{expandedDossierIssue.status === 'resolved' ? 'Reopen Flag' : 'Mark as Resolved'}</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setExpandedDossierIssue(null)}
+                  className="px-4 py-2 rounded-lg bg-[#2B2016] hover:bg-[#3E2E20] text-[#E0B77D] font-typewriter text-xs font-bold uppercase transition-colors"
+                >
+                  Return to Corkboard
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+</div>
   );
 };
