@@ -48,6 +48,17 @@ export interface Story {
 
 export type ChapterStatus = 'draft' | 'in_review' | 'completed';
 
+export interface Page {
+  id: string;
+  chapter_id: string;
+  page_number: number;
+  content: string;
+  word_count: number;
+  save_status?: 'saved' | 'saving' | 'unsaved' | 'error';
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Chapter {
   id: string;
   story_id: string;
@@ -57,6 +68,7 @@ export interface Chapter {
   summary?: string;
   word_count?: number;
   status: ChapterStatus;
+  pages?: Page[];
   created_at?: string;
   updated_at?: string;
 }
@@ -66,6 +78,8 @@ export interface CharacterRelationship {
   relation_type: string;
   notes?: string;
 }
+
+export type InvestigationStatus = 'innocent' | 'person_of_interest' | 'unclassified';
 
 export interface Character {
   id: string;
@@ -88,6 +102,7 @@ export interface Character {
   last_appearance?: string;
   portrait_url?: string;
   character_arc?: string;
+  investigation_status?: InvestigationStatus;
   created_at?: string;
   updated_at?: string;
 }

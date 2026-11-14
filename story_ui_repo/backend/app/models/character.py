@@ -23,6 +23,7 @@ class CharacterCreate(BaseModel):
     last_appearance: Optional[str] = "Chapter 1"
     portrait_url: Optional[str] = None
     character_arc: Optional[str] = ""
+    investigation_status: Optional[str] = "unclassified"
 
 class CharacterUpdate(BaseModel):
     name: Optional[str] = None
@@ -43,6 +44,7 @@ class CharacterUpdate(BaseModel):
     last_appearance: Optional[str] = None
     portrait_url: Optional[str] = None
     character_arc: Optional[str] = None
+    investigation_status: Optional[str] = None
 
 class Character(BaseModel):
     id: str = Field(default_factory=lambda: f"char_{uuid.uuid4().hex[:10]}")
@@ -65,5 +67,6 @@ class Character(BaseModel):
     last_appearance: str = "Chapter 1"
     portrait_url: Optional[str] = None
     character_arc: Optional[str] = ""
+    investigation_status: str = "unclassified"
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())

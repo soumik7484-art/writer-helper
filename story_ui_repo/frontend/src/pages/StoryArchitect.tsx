@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStory } from '../context/StoryContext';
 import { api } from '../services/api';
 import { NavTab } from '../components/common/Navbar';
@@ -16,7 +16,8 @@ import {
   FileText,
   Clock,
   Compass,
-  Layers
+  Layers,
+  Upload
 } from 'lucide-react';
 import { Genre, Mood, OutlineItem, Story } from '../types';
 
@@ -46,9 +47,50 @@ export const StoryArchitect: React.FC<StoryArchitectProps> = ({ onNavigate }) =>
   const [description, setDescription] = useState(
     'A private inquiry agent is summoned to an isolated coastal estate following an impossible disappearance. Strange maritime ciphers and subterranean tide vaults indicate a clandestine pact between the town founders.'
   );
-  const [coverUrl, setCoverUrl] = useState(
-    'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop'
-  );
+  const [coverUrl, setCoverUrl] = useState('');
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!validExts.includes(ext)) {
+      addToast("Invalid Format", "Please select a JPG, JPEG, PNG, or WEBP image file.", "error");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      addToast("File Too Large", "Cover image must be 10MB or less.", "error");
+      return;
+    }
+
+    try {
+      setUploadingCover(true);
+      sound.playPaperRustle();
+      addToast("Uploading Photograph", "Synthesizing cover evidence...", "info");
+
+      const res = await api.uploadStandaloneCover(file);
+      setCoverUrl(res.cover_url);
+      sound.playTypewriterKeystroke();
+      addToast("Photograph Attached", "Preview ready for final dossier seal.", "success");
+    } catch (err: any) {
+      addToast("Upload Failed", err.message || "Failed to upload image.", "error");
+    } finally {
+      setUploadingCover(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveCover = () => {
+    setCoverUrl('');
+    sound.playPaperRustle();
+    addToast("Photograph Removed", "Default archive placeholder restored.", "info");
+  };
 
   // Generated Outline State
   const [outline, setOutline] = useState<OutlineItem[]>([]);
@@ -590,25 +632,67 @@ export const StoryArchitect: React.FC<StoryArchitectProps> = ({ onNavigate }) =>
             >
               <div className="flex flex-col md:flex-row items-center md:items-start gap-8 bg-[#D8CAB0] p-6 rounded-md border border-[#8C765B] shadow-inner">
                 {/* Polaroid Preview */}
-                <div className="shrink-0">
-                  <Polaroid
-                    imageUrl={coverUrl}
-                    caption={title}
-                    subcaption={`${genre} • ${setting}`}
-                    rotation={-2}
-                    pinned={true}
-                    size="md"
-                  />
-                  <div className="mt-3">
-                    <label className="block font-typewriter text-xs sm:text-[13px] text-[#63503E] uppercase font-bold mb-1">
-                      Cover Evidence Image URL:
-                    </label>
-                    <input
-                      type="text"
-                      value={coverUrl}
-                      onChange={(e) => setCoverUrl(e.target.value)}
-                      className="w-full px-2 py-1 rounded bg-[#E4D9C3] border border-[#9A846A] font-typewriter text-xs sm:text-[13px] text-[#231A13]"
+                <div className="shrink-0 flex flex-col items-center">
+                  <div className="relative">
+                    <Polaroid
+                      imageUrl={coverUrl || undefined}
+                      caption={title || "Untitled Case"}
+                      subcaption={`${genre} • ${setting}`}
+                      rotation={-2}
+                      pinned={true}
+                      size="md"
                     />
+                    {uploadingCover && (
+                      <div className="absolute inset-0 bg-black/60 rounded-sm flex flex-col items-center justify-center z-30 text-[#E0B77D] font-typewriter text-xs">
+                        <span className="w-5 h-5 border-2 border-[#C49A61] border-t-transparent rounded-full animate-spin mb-1.5" />
+                        <span>Pinning Photo...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Image Upload Control */}
+                  <div className="mt-3.5 flex flex-col items-center gap-2 w-full max-w-[240px]">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handleCoverUpload}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingCover}
+                      className="w-full flex items-center justify-center space-x-2 px-3.5 py-2 rounded bg-[#241C15] hover:bg-[#34261B] text-[#DDAE72] hover:text-[#FFF4E4] border border-[#6B533A] font-typewriter text-xs font-bold uppercase tracking-wider shadow transition-all"
+                    >
+                      <Upload className="w-3.5 h-3.5 text-[#C49A61]" />
+                      <span>{coverUrl ? "Replace Cover Image" : "Upload Cover Image"}</span>
+                    </button>
+
+                    {coverUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveCover}
+                        disabled={uploadingCover}
+                        className="text-[11px] text-[#8F332B] hover:text-[#B4473E] font-typewriter underline transition-colors"
+                      >
+                        Remove Cover Photograph
+                      </button>
+                    )}
+
+                    <div className="w-full mt-1">
+                      <label className="block font-typewriter text-[11px] text-[#63503E] uppercase font-bold mb-1">
+                        Or Image URL:
+                      </label>
+                      <input
+                        type="text"
+                        value={coverUrl}
+                        onChange={(e) => setCoverUrl(e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full px-2 py-1 rounded bg-[#E4D9C3] border border-[#9A846A] font-typewriter text-xs text-[#231A13] placeholder:text-[#8C7A65]"
+                      />
+                    </div>
                   </div>
                 </div>
 

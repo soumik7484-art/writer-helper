@@ -26,6 +26,11 @@ export const Polaroid: React.FC<PolaroidProps> = ({
   onClick,
   statusBadge,
 }) => {
+  const [imageError, setImageError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
   const sizeClasses = {
     xs: 'w-28 sm:w-32 p-1.5 pb-4',
     sm: 'w-40 sm:w-44 p-2 pb-6',
@@ -66,15 +71,12 @@ export const Polaroid: React.FC<PolaroidProps> = ({
 
       {/* Photo Frame Container */}
       <div className={`relative w-full ${imgHeightClasses} bg-[#1A1816] rounded-sm overflow-hidden shadow-inner border border-black/20`}>
-        {imageUrl ? (
+        {imageUrl && !imageError ? (
           <img
             src={imageUrl}
             alt={caption}
             className="w-full h-full object-cover filter contrast-[1.06] brightness-[0.98] sepia-[0.12] transition-transform duration-500 hover:scale-105"
-            onError={(e) => {
-              // Graceful fallback to dark atmospheric gradient if image fails
-              (e.target as HTMLElement).style.display = 'none';
-            }}
+            onError={() => setImageError(true)}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-[#25201C] p-4 text-center">

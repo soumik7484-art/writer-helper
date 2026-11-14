@@ -16,6 +16,8 @@ import { SettingsModal } from './components/common/SettingsModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { PacingAlertModal } from './components/common/PacingAlertModal';
+import { CursorProvider } from './context/CursorContext';
+import { CustomCursor } from './components/common/CustomCursor';
 
 // Global error boundary protecting the application from black screens
 class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error?: Error }> {
@@ -291,8 +293,11 @@ export default function App() {
   return (
     <AppErrorBoundary>
       <StoryProvider>
-        <MainContent />
-        <PacingAlertModal />
+        <CursorProvider>
+          <CustomCursor />
+          <MainContent />
+          <PacingAlertModal />
+        </CursorProvider>
       </StoryProvider>
     </AppErrorBoundary>
   );

@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 import threading
 from pathlib import Path
@@ -36,6 +36,7 @@ class DatabaseService:
                 initial_data = {
                     "stories": {},
                     "chapters": {},
+                    "pages": {},
                     "characters": {},
                     "events": {},
                     "memories": {},
@@ -49,10 +50,12 @@ class DatabaseService:
     def _load_local(self) -> Dict[str, Any]:
         with lock:
             if not self.local_file.exists():
-                return {"stories": {}, "chapters": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "investigation_boards": {}, "culprits": {}}
+                return {"stories": {}, "chapters": {}, "pages": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "investigation_boards": {}, "culprits": {}}
             try:
                 with open(self.local_file, "r", encoding="utf-8") as f:
                     loaded = json.load(f)
+                    if "pages" not in loaded:
+                        loaded["pages"] = {}
                     if "boards" not in loaded:
                         loaded["boards"] = {}
                     if "investigation_boards" not in loaded:
@@ -61,7 +64,7 @@ class DatabaseService:
                         loaded["culprits"] = {}
                     return loaded
             except Exception:
-                return {"stories": {}, "chapters": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "investigation_boards": {}, "culprits": {}}
+                return {"stories": {}, "chapters": {}, "pages": {}, "characters": {}, "events": {}, "memories": {}, "plotholes": {}, "boards": {}, "investigation_boards": {}, "culprits": {}}
 
     def _save_local(self, data: Dict[str, Any]):
         with lock:
@@ -122,59 +125,257 @@ class DatabaseService:
             chaps = list(self.db.chapters.find({"story_id": story_id}).sort("chapter_number", 1))
             for c in chaps:
                 c.pop("_id", None)
+                c["pages"] = self.get_pages(c["id"])
             return chaps
         data = self._load_local()
         chaps = [c for c in data["chapters"].values() if c.get("story_id") == story_id]
-        return sorted(chaps, key=lambda x: x.get("chapter_number", 0))
+        sorted_chaps = sorted(chaps, key=lambda x: x.get("chapter_number", 0))
+        for c in sorted_chaps:
+            c["pages"] = self.get_pages(c["id"])
+        return sorted_chaps
 
     def get_chapter(self, chapter_id: str) -> Optional[Dict[str, Any]]:
+        chap = None
         if self.use_mongo:
             doc = self.db.chapters.find_one({"id": chapter_id})
             if doc:
                 doc.pop("_id", None)
-            return doc
-        data = self._load_local()
-        return data["chapters"].get(chapter_id)
+                chap = doc
+        else:
+            data = self._load_local()
+            chap = data["chapters"].get(chapter_id)
+        if chap:
+            chap["pages"] = self.get_pages(chapter_id)
+        return chap
 
     def save_chapter(self, chapter: Dict[str, Any]) -> Dict[str, Any]:
         chapter["word_count"] = len(chapter.get("content", "").split())
         chapter["updated_at"] = datetime.utcnow().isoformat()
+
+        # Handle pages if present in chapter payload
+        if "pages" in chapter and chapter["pages"]:
+            for p in chapter["pages"]:
+                p_dict = p if isinstance(p, dict) else p.dict()
+                p_dict["chapter_id"] = chapter["id"]
+                self.save_page(chapter["id"], p_dict, sync_chapter=False)
+
         if self.use_mongo:
             self.db.chapters.update_one({"id": chapter["id"]}, {"$set": chapter}, upsert=True)
+            chapter["pages"] = self.get_pages(chapter["id"])
             return chapter
         data = self._load_local()
         data["chapters"][chapter["id"]] = chapter
         self._save_local(data)
+        chapter["pages"] = self.get_pages(chapter["id"])
         return chapter
 
     def delete_chapter(self, chapter_id: str) -> bool:
         if self.use_mongo:
             self.db.chapters.delete_one({"id": chapter_id})
+            self.db.pages.delete_many({"chapter_id": chapter_id})
             return True
         data = self._load_local()
         data["chapters"].pop(chapter_id, None)
+        if "pages" in data:
+            data["pages"] = {k: v for k, v in data["pages"].items() if v.get("chapter_id") != chapter_id}
         self._save_local(data)
         return True
+
+    def get_pages(self, chapter_id: str) -> List[Dict[str, Any]]:
+        pages = []
+        if self.use_mongo:
+            pages = list(self.db.pages.find({"chapter_id": chapter_id}).sort("page_number", 1))
+            for p in pages:
+                p.pop("_id", None)
+        else:
+            data = self._load_local()
+            pages_dict = data.get("pages", {})
+            pages = [p for p in pages_dict.values() if p.get("chapter_id") == chapter_id]
+            pages = sorted(pages, key=lambda x: x.get("page_number", 1))
+
+        if pages:
+            return pages
+
+        # Lazy initialize pages from chapter content if none exist yet
+        chap = None
+        if self.use_mongo:
+            doc = self.db.chapters.find_one({"id": chapter_id})
+            if doc:
+                doc.pop("_id", None)
+                chap = doc
+        else:
+            data = self._load_local()
+            chap = data.get("chapters", {}).get(chapter_id)
+
+        if not chap:
+            return []
+
+        content = chap.get("content", "")
+        import re
+        raw_parts = re.split(r'<!--\s*(?:story-)?page-?break\s*-->', content, flags=re.IGNORECASE) if content else []
+        raw_parts = [p.strip() for p in raw_parts if p.strip()]
+        if not raw_parts:
+            raw_parts = [content] if content and content.strip() else ["<p><br></p>"]
+
+        initialized_pages = []
+        now = datetime.utcnow().isoformat()
+        for idx, part in enumerate(raw_parts):
+            p_id = f"page_{chapter_id}_{idx + 1}"
+            clean_text = re.sub(r'<[^>]*>', ' ', part).strip()
+            words = len(clean_text.split()) if clean_text else 0
+            p_obj = {
+                "id": p_id,
+                "chapter_id": chapter_id,
+                "page_number": idx + 1,
+                "content": part,
+                "word_count": words,
+                "save_status": "saved",
+                "created_at": chap.get("created_at", now),
+                "updated_at": chap.get("updated_at", now),
+            }
+            initialized_pages.append(p_obj)
+            self.save_page(chapter_id, p_obj, sync_chapter=False)
+
+        return initialized_pages
+
+    def get_page(self, chapter_id: str, page_id: str) -> Optional[Dict[str, Any]]:
+        if self.use_mongo:
+            doc = self.db.pages.find_one({"id": page_id, "chapter_id": chapter_id})
+            if doc:
+                doc.pop("_id", None)
+                return doc
+        else:
+            data = self._load_local()
+            p = data.get("pages", {}).get(page_id)
+            if p and p.get("chapter_id") == chapter_id:
+                return p
+        pages = self.get_pages(chapter_id)
+        for p in pages:
+            if p.get("id") == page_id:
+                return p
+        return None
+
+    def save_page(self, chapter_id: str, page_dict: Dict[str, Any], sync_chapter: bool = True) -> Dict[str, Any]:
+        import re
+        page_dict["chapter_id"] = chapter_id
+        content = page_dict.get("content", "")
+        clean_text = re.sub(r'<[^>]*>', ' ', content).strip()
+        page_dict["word_count"] = len(clean_text.split()) if clean_text else 0
+        page_dict["updated_at"] = datetime.utcnow().isoformat()
+        if "save_status" not in page_dict or not page_dict["save_status"]:
+            page_dict["save_status"] = "saved"
+
+        if self.use_mongo:
+            self.db.pages.update_one({"id": page_dict["id"]}, {"$set": page_dict}, upsert=True)
+        else:
+            data = self._load_local()
+            if "pages" not in data:
+                data["pages"] = {}
+            data["pages"][page_dict["id"]] = page_dict
+            self._save_local(data)
+
+        if sync_chapter:
+            self._sync_chapter_from_pages(chapter_id)
+
+        return page_dict
+
+    def _sync_chapter_from_pages(self, chapter_id: str):
+        pages = self.get_pages(chapter_id)
+        pages_sorted = sorted(pages, key=lambda x: x.get("page_number", 1))
+        meaningful = [p["content"] for p in pages_sorted if p.get("content") and p.get("content").strip() != "<p><br></p>"]
+        combined_content = "<!-- story-page-break -->".join(meaningful) if meaningful else (pages_sorted[0]["content"] if pages_sorted else "")
+        total_words = sum(p.get("word_count", 0) for p in pages_sorted)
+
+        if self.use_mongo:
+            self.db.chapters.update_one(
+                {"id": chapter_id},
+                {"$set": {
+                    "content": combined_content,
+                    "word_count": total_words,
+                    "updated_at": datetime.utcnow().isoformat()
+                }}
+            )
+        else:
+            data = self._load_local()
+            if chapter_id in data.get("chapters", {}):
+                data["chapters"][chapter_id]["content"] = combined_content
+                data["chapters"][chapter_id]["word_count"] = total_words
+                data["chapters"][chapter_id]["updated_at"] = datetime.utcnow().isoformat()
+                self._save_local(data)
+
+    def create_page(self, chapter_id: str, page_data: Dict[str, Any]) -> Dict[str, Any]:
+        import re
+        import uuid
+        existing_pages = self.get_pages(chapter_id)
+        next_num = page_data.get("page_number")
+        if next_num is None:
+            next_num = len(existing_pages) + 1
+
+        p_id = page_data.get("id") or f"page_{chapter_id}_{uuid.uuid4().hex[:8]}"
+        content = page_data.get("content", "<p><br></p>")
+        clean_text = re.sub(r'<[^>]*>', ' ', content).strip()
+        now = datetime.utcnow().isoformat()
+
+        new_page = {
+            "id": p_id,
+            "chapter_id": chapter_id,
+            "page_number": next_num,
+            "content": content,
+            "word_count": len(clean_text.split()) if clean_text else 0,
+            "save_status": "saved",
+            "created_at": now,
+            "updated_at": now
+        }
+        return self.save_page(chapter_id, new_page, sync_chapter=True)
+
+    def delete_page(self, chapter_id: str, page_id: str) -> bool:
+        if self.use_mongo:
+            self.db.pages.delete_one({"id": page_id, "chapter_id": chapter_id})
+        else:
+            data = self._load_local()
+            if "pages" in data and page_id in data["pages"]:
+                del data["pages"][page_id]
+                self._save_local(data)
+
+        self._sync_chapter_from_pages(chapter_id)
+        return True
+
+    def _normalize_character(self, c: Dict[str, Any]) -> Dict[str, Any]:
+        if not c:
+            return c
+        status = c.get("investigation_status")
+        if not status:
+            if c.get("is_culprit") or c.get("role") == "Culprit":
+                status = "person_of_interest"
+            else:
+                status = "unclassified"
+        elif status == "culprit":
+            status = "person_of_interest"
+        c["investigation_status"] = status
+        return c
 
     def get_characters(self, story_id: str) -> List[Dict[str, Any]]:
         if self.use_mongo:
             chars = list(self.db.characters.find({"story_id": story_id}))
             for c in chars:
                 c.pop("_id", None)
-            return chars
+            return [self._normalize_character(c) for c in chars]
         data = self._load_local()
-        return [c for c in data["characters"].values() if c.get("story_id") == story_id]
+        return [self._normalize_character(c) for c in data["characters"].values() if c.get("story_id") == story_id]
 
     def get_character(self, character_id: str) -> Optional[Dict[str, Any]]:
         if self.use_mongo:
             doc = self.db.characters.find_one({"id": character_id})
             if doc:
                 doc.pop("_id", None)
-            return doc
+                return self._normalize_character(doc)
+            return None
         data = self._load_local()
-        return data["characters"].get(character_id)
+        c = data["characters"].get(character_id)
+        return self._normalize_character(c) if c else None
 
     def save_character(self, character: Dict[str, Any]) -> Dict[str, Any]:
+        character = self._normalize_character(dict(character))
         character["updated_at"] = datetime.utcnow().isoformat()
         if self.use_mongo:
             self.db.characters.update_one({"id": character["id"]}, {"$set": character}, upsert=True)

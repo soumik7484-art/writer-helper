@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Character, TimelineEvent, Chapter } from '../../types';
+import { Character, TimelineEvent, Chapter, InvestigationStatus } from '../../types';
 import { api } from '../../services/api';
 import { Stamp } from '../common/Stamp';
 import { sound } from '../../services/audioService';
@@ -34,6 +34,8 @@ interface CharacterDetailsModalProps {
   isCulprit?: boolean;
   onToggleCulprit?: () => void;
   onSetCulprit?: (isCulprit: boolean) => void;
+  investigationStatus?: InvestigationStatus;
+  onChangeInvestigationStatus?: (status: InvestigationStatus) => void;
   onClose: () => void;
   onSelectCharacter?: (charId: string) => void;
   onEdit?: (character: Character) => void;
@@ -48,6 +50,8 @@ export const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   isCulprit = false,
   onToggleCulprit,
   onSetCulprit,
+  investigationStatus,
+  onChangeInvestigationStatus,
   onClose,
   onSelectCharacter,
   onEdit,
@@ -118,6 +122,39 @@ export const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
   }, [characterId, onClose]);
 
   if (!characterId) return null;
+
+  const currentStatus: InvestigationStatus =
+    character?.investigation_status ||
+    (isCulprit ? 'person_of_interest' : (investigationStatus || 'unclassified'));
+
+  const handleUpdateStatus = async (newStatus: InvestigationStatus) => {
+    sound.playPaperRustle();
+    if (!character) return;
+
+    // Toggle: if clicking active status, toggle back to unclassified
+    const targetStatus: InvestigationStatus = currentStatus === newStatus ? 'unclassified' : newStatus;
+
+    // Immediately update local modal state
+    const updatedChar: Character = { ...character, investigation_status: targetStatus };
+    setCharacter(updatedChar);
+
+    // Persist to backend & MongoDB
+    try {
+      await api.updateCharacterInvestigationStatus(character.id, targetStatus);
+    } catch (e) {
+      console.error("Failed to update character investigation status:", e);
+    }
+
+    if (onChangeInvestigationStatus) {
+      onChangeInvestigationStatus(targetStatus);
+    }
+    if (onSetCulprit) {
+      onSetCulprit(targetStatus === 'person_of_interest');
+    }
+    if (onToggleCulprit && targetStatus === 'person_of_interest' && !isCulprit) {
+      onToggleCulprit();
+    }
+  };
 
   // Safe helpers for traits & appearances
   const traits = Array.isArray(character?.personality_traits)
@@ -269,7 +306,9 @@ export const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
 
         {/* ── MAIN PHYSICAL INVESTIGATION DOSSIER ── */}
         {!loading && !error && character && (
-          <div className="relative rounded-2xl bg-[#D6C5A9] p-5 sm:p-9 border-2 border-[#8C7456] shadow-clipboard text-[#2B2117] max-h-[82vh] overflow-y-auto space-y-6">
+          <div className={`relative rounded-2xl bg-[#D6C5A9] p-5 sm:p-9 border-2 shadow-clipboard text-[#2B2117] max-h-[82vh] overflow-y-auto space-y-6 transition-all ${
+            currentStatus === 'person_of_interest' ? 'border-[#B03A2E]/70 shadow-[0_12px_40px_rgba(176,58,46,0.18)]' : 'border-[#8C7456]'
+          }`}>
             
             {/* Corner Status Stamp */}
             <div className="absolute top-5 right-5 sm:top-6 sm:right-6 pointer-events-none z-10">
@@ -295,37 +334,66 @@ export const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
               />
             </div>
 
+            {/* Distinctive Red Archival Stamp / POI Badge on Dossier */}
+            {currentStatus === 'person_of_interest' && (
+              <div className="absolute top-5 left-5 sm:top-6 sm:left-8 z-10 pointer-events-none">
+                <Stamp
+                  label="PERSON OF INTEREST"
+                  type="red"
+                  rotation={-3}
+                  size="md"
+                  className="bg-red-950/10 border-[2.5px] border-[#9A1C16] text-[#9A1C16] font-black shadow-md tracking-widest"
+                />
+              </div>
+            )}
+            {currentStatus === 'innocent' && (
+              <div className="absolute top-5 left-5 sm:top-6 sm:left-8 z-10 pointer-events-none">
+                <Stamp
+                  label="CLASSIFIED INNOCENT"
+                  type="green"
+                  rotation={-2}
+                  size="sm"
+                  className="bg-emerald-950/10 border-[1.5px] border-[#4A6B42] text-[#4A6B42] font-bold tracking-wider"
+                />
+              </div>
+            )}
+
             {/* 1. Header Section: Large Portrait + Vital Specifications */}
             <div className="flex flex-col md:flex-row items-center md:items-start gap-6 border-b border-[#524131]/30 pb-6">
               
               {/* Large Portrait Polaroid */}
               <div className="shrink-0">
-                <div className="w-52 sm:w-60 p-3 pb-6 bg-[#EFECE6] rounded shadow-2xl border border-[#2D2118] text-center relative rotate-[-1.5deg]">
+                <div className={`w-52 sm:w-60 p-3 pb-6 rounded shadow-2xl text-center relative rotate-[-1.5deg] transition-all ${
+                  currentStatus === 'person_of_interest'
+                    ? 'bg-[#F2ECE6] border-2 border-[#B03A2E] ring-2 ring-[#B03A2E]/30 shadow-[0_4px_24px_rgba(176,58,46,0.3)]'
+                    : 'bg-[#EFECE6] border border-[#2D2118]'
+                }`}>
                   {/* Brass pushpin at top */}
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full bg-[#B03A2E] border border-[#5E1914] shadow flex items-center justify-center z-20">
                     <div className="w-2 h-2 rounded-full bg-white/70"></div>
                   </div>
 
-                  {/* Red Culprit Pin / Indicator on Border Area */}
-                  {isCulprit && (
+                  {/* Red Archival POI Badge / Case Annotation on Photo Frame */}
+                  {currentStatus === 'person_of_interest' && (
                     <div 
                       className="absolute -top-2.5 -right-2.5 z-30 pointer-events-none flex items-center justify-center"
-                      title="Marked as Culprit"
+                      title="Person of Interest (POI)"
                     >
-                      <div className="relative w-8 h-8 rounded-full shadow-[0_3px_8px_rgba(0,0,0,0.65),0_0_12px_rgba(192,57,43,0.5)] flex items-center justify-center">
-                        <div 
-                          className="absolute inset-0 rounded-full border-2 border-[#4A0E0B]"
-                          style={{
-                            background: 'radial-gradient(circle at 35% 35%, #FF5A4E 0%, #D32F2F 45%, #9A1C16 80%, #5E0D08 100%)',
-                          }}
-                        />
-                        <div className="relative w-4 h-4 rounded-full border border-white/70 flex items-center justify-center shadow-inner">
-                          <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_3px_rgba(255,255,255,0.9)]" />
-                        </div>
-                        <div 
-                          className="absolute top-1 left-2 w-2 h-1 rounded-full bg-white/60 -rotate-30 pointer-events-none"
-                          style={{ filter: 'blur(0.2px)' }}
-                        />
+                      <div className="px-2 py-0.5 rounded-full bg-[#9A1C16] border-2 border-[#FFCDD2] text-white shadow-[0_2px_10px_rgba(154,28,22,0.7)] flex items-center space-x-1 transform rotate-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        <span className="font-typewriter text-[9px] font-black tracking-widest uppercase">POI</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStatus === 'innocent' && (
+                    <div 
+                      className="absolute -top-2.5 -right-2.5 z-30 pointer-events-none flex items-center justify-center"
+                      title="Classified as Innocent"
+                    >
+                      <div className="px-1.5 py-0.5 rounded-full bg-[#2E4729] border border-[#A5DE9E]/60 text-[#D7F5D2] shadow-sm flex items-center space-x-1 transform -rotate-2">
+                        <UserCheck className="w-2.5 h-2.5 text-[#A5DE9E]" />
+                        <span className="font-typewriter text-[8px] font-bold tracking-wider uppercase">Innocent</span>
                       </div>
                     </div>
                   )}
@@ -434,54 +502,63 @@ export const CharacterDetailsModal: React.FC<CharacterDetailsModalProps> = ({
                   </div>
                 </div>
 
-                {/* ── TWO-OPTION ACTION AREA: CULPRIT CLASSIFICATION ── */}
+                {/* ── TWO-OPTION ACTION AREA: INVESTIGATION VERDICT ── */}
                 <div className="pt-2">
-                  <div className="bg-[#CCAFA0]/40 p-2.5 sm:p-3 rounded-xl border border-[#8F785C]/80 flex flex-wrap items-center justify-between gap-2.5 shadow-inner">
+                  <div className={`p-2.5 sm:p-3 rounded-xl border flex flex-wrap items-center justify-between gap-2.5 shadow-inner transition-all ${
+                    currentStatus === 'person_of_interest'
+                      ? 'bg-[#B03A2E]/15 border-[#B03A2E]/50'
+                      : currentStatus === 'innocent'
+                      ? 'bg-[#4A6B42]/15 border-[#5B8251]/40'
+                      : 'bg-[#CCAFA0]/40 border-[#8F785C]/80'
+                  }`}>
                     <div>
                       <span className="font-typewriter text-[10px] text-[#695441] uppercase tracking-wider block font-bold">
                         INVESTIGATION VERDICT
                       </span>
-                      <span className="font-serif text-xs text-[#2A2016] font-semibold">
-                        {isCulprit ? "Marked as Prime Culprit" : "Classified as Innocent"}
+                      <span className="font-serif text-xs text-[#2A2016] font-semibold flex items-center gap-1.5 mt-0.5">
+                        {currentStatus === 'person_of_interest' ? (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-[#B03A2E] animate-pulse" />
+                            <span className="text-[#8B1E19] font-bold">Designated as Person of Interest (POI)</span>
+                          </>
+                        ) : currentStatus === 'innocent' ? (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-[#3D6938]" />
+                            <span className="text-[#2D4E29] font-bold">Classified as Innocent</span>
+                          </>
+                        ) : (
+                          <span className="text-[#6D5845] italic">Unclassified / Under Investigation</span>
+                        )}
                       </span>
                     </div>
 
                     <div className="inline-flex rounded-lg p-1 bg-[#231A14] border border-[#3E3024] shadow-md">
                       <button
                         type="button"
-                        onClick={() => {
-                          sound.playPaperRustle();
-                          if (onSetCulprit) {
-                            onSetCulprit(false);
-                          }
-                        }}
+                        onClick={() => handleUpdateStatus('innocent')}
                         className={`px-3 py-1.5 rounded-md font-typewriter text-xs font-bold uppercase transition-all flex items-center space-x-1.5 ${
-                          !isCulprit
-                            ? 'bg-[#3D2D20] text-[#E0B77D] border border-[#C49A61]/50 shadow'
+                          currentStatus === 'innocent'
+                            ? 'bg-[#2E4729] text-[#C9ECC5] border border-[#5E9454] shadow font-black'
                             : 'text-[#9A8978] hover:text-[#E0D7C7]'
                         }`}
-                        title="Classify subject as Innocent"
+                        title={currentStatus === 'innocent' ? "Classified as Innocent (Click to unclassify)" : "Classify subject as Innocent"}
                       >
-                        <UserCheck className="w-3.5 h-3.5 text-[#C49A61]" />
+                        <UserCheck className={`w-3.5 h-3.5 ${currentStatus === 'innocent' ? 'text-[#A5DE9E]' : 'text-[#C49A61]'}`} />
                         <span>Innocent</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() => {
-                          if (onToggleCulprit) {
-                            onToggleCulprit();
-                          }
-                        }}
+                        onClick={() => handleUpdateStatus('person_of_interest')}
                         className={`px-3 py-1.5 rounded-md font-typewriter text-xs font-bold uppercase transition-all flex items-center space-x-1.5 ${
-                          isCulprit
+                          currentStatus === 'person_of_interest'
                             ? 'bg-[#B03A2E] text-white border border-[#E74C3C] shadow-lg font-black'
                             : 'text-[#9A8978] hover:text-[#E5A8A3]'
                         }`}
-                        title={isCulprit ? "Click again to remove culprit mark" : "Mark subject as culprit"}
+                        title={currentStatus === 'person_of_interest' ? "Click to clear Person of Interest designation" : "Designate as Person of Interest (POI)"}
                       >
-                        <span className={`w-2 h-2 rounded-full ${isCulprit ? 'bg-white ring-2 ring-red-400' : 'bg-[#B03A2E]'}`} />
-                        <span>Culprit</span>
+                        <span className={`w-2 h-2 rounded-full ${currentStatus === 'person_of_interest' ? 'bg-white ring-2 ring-red-400' : 'bg-[#B03A2E]'}`} />
+                        <span>PERSON OF INTEREST</span>
                       </button>
                     </div>
                   </div>

@@ -1,7 +1,8 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from .routers import stories, chapters, characters, timeline, memory, plotholes, ai
-from .config import PORT, HOST
+from .config import PORT, HOST, UPLOADS_DIR
 
 app = FastAPI(
     title="StoryWeave AI - Investigative Storytelling Studio API",
@@ -16,6 +17,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/api/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 app.include_router(stories.router)
 app.include_router(chapters.router)

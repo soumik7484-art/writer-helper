@@ -1,7 +1,9 @@
 import {
   Story,
   Chapter,
+  Page,
   Character,
+  InvestigationStatus,
   TimelineEvent,
   Memory,
   PlotHole,
@@ -140,6 +142,93 @@ class ApiService {
     }
   }
 
+  async uploadStoryCover(storyId: string, file: File): Promise<{ cover_url: string; story: Story }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/stories/${storyId}/cover`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let message = `Upload failed: ${response.statusText}`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.detail) message = parsed.detail;
+        } catch { }
+        throw new Error(message);
+      }
+
+      return (await response.json()) as { cover_url: string; story: Story };
+    } catch (err: any) {
+      console.warn(`[StoryWeave Cover Upload Fallback]`, err.message);
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      if (localStore.stories && localStore.stories[storyId]) {
+        localStore.stories[storyId].cover_url = base64;
+        localStore.stories[storyId].updated_at = new Date().toISOString();
+        return { cover_url: base64, story: localStore.stories[storyId] };
+      }
+      return { cover_url: base64, story: { id: storyId, cover_url: base64 } as any };
+    }
+  }
+
+  async uploadStandaloneCover(file: File): Promise<{ cover_url: string; filename: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/stories/upload-cover`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let message = `Upload failed: ${response.statusText}`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.detail) message = parsed.detail;
+        } catch { }
+        throw new Error(message);
+      }
+
+      return (await response.json()) as { cover_url: string; filename: string };
+    } catch (err: any) {
+      console.warn(`[StoryWeave Standalone Upload Fallback]`, err.message);
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      return { cover_url: base64, filename: file.name };
+    }
+  }
+
+  async removeStoryCover(storyId: string): Promise<{ cover_url: string; story: Story }> {
+    try {
+      return await this.request<{ cover_url: string; story: Story }>(`/api/stories/${storyId}/cover`, {
+        method: 'DELETE',
+      });
+    } catch {
+      if (localStore.stories && localStore.stories[storyId]) {
+        localStore.stories[storyId].cover_url = '';
+        localStore.stories[storyId].updated_at = new Date().toISOString();
+        return { cover_url: '', story: localStore.stories[storyId] };
+      }
+      return { cover_url: '', story: { id: storyId, cover_url: '' } as any };
+    }
+  }
+
   async previewOutline(params: {
     title: string;
     description: string;
@@ -233,6 +322,128 @@ class ApiService {
     }
   }
 
+  // Pages
+  async getChapterPages(chapterId: string): Promise<Page[]> {
+    try {
+      return await this.request<Page[]>(`/api/chapters/${chapterId}/pages`);
+    } catch {
+      localStore.pages = localStore.pages || {};
+      const list = Object.values(localStore.pages) as Page[];
+      const chapterPages = list.filter(p => p.chapter_id === chapterId);
+      if (chapterPages.length > 0) {
+        return chapterPages.sort((a, b) => a.page_number - b.page_number);
+      }
+      // Initialize from chapter content if available
+      const chap = (localStore.chapters || {})[chapterId];
+      if (chap) {
+        const raw = chap.content || '';
+        const parts = raw.split(/<!--\s*(?:story-)?page-?break\s*-->/gi).filter((p: string) => p.trim());
+        const initialParts = parts.length > 0 ? parts : [raw || '<p><br></p>'];
+        const initialized: Page[] = initialParts.map((content: string, idx: number) => {
+          const words = content.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+          const pageObj: Page = {
+            id: `page_${chapterId}_${idx + 1}`,
+            chapter_id: chapterId,
+            page_number: idx + 1,
+            content,
+            word_count: words,
+            save_status: 'saved',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          localStore.pages[pageObj.id] = pageObj;
+          return pageObj;
+        });
+        return initialized;
+      }
+      return [];
+    }
+  }
+
+  async getChapterPage(chapterId: string, pageId: string): Promise<Page> {
+    try {
+      return await this.request<Page>(`/api/chapters/${chapterId}/pages/${pageId}`);
+    } catch {
+      localStore.pages = localStore.pages || {};
+      return localStore.pages[pageId] as Page;
+    }
+  }
+
+  async createChapterPage(chapterId: string, page: Partial<Page>): Promise<Page> {
+    try {
+      return await this.request<Page>(`/api/chapters/${chapterId}/pages`, {
+        method: 'POST',
+        body: JSON.stringify(page),
+      });
+    } catch {
+      localStore.pages = localStore.pages || {};
+      const id = page.id || `page_${chapterId}_${Math.random().toString(36).substring(2, 9)}`;
+      const existing = Object.values(localStore.pages).filter((p: any) => p.chapter_id === chapterId) as Page[];
+      const page_number = page.page_number || (existing.length + 1);
+      const content = page.content || '<p><br></p>';
+      const words = content.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+      const newPage: Page = {
+        id,
+        chapter_id: chapterId,
+        page_number,
+        content,
+        word_count: words,
+        save_status: 'saved',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...page
+      };
+      localStore.pages[id] = newPage;
+      return newPage;
+    }
+  }
+
+  async updateChapterPage(chapterId: string, pageId: string, updates: Partial<Page>): Promise<Page> {
+    try {
+      return await this.request<Page>(`/api/chapters/${chapterId}/pages/${pageId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+      });
+    } catch {
+      localStore.pages = localStore.pages || {};
+      if (localStore.pages[pageId]) {
+        const content = updates.content !== undefined ? updates.content : localStore.pages[pageId].content;
+        const words = content.replace(/<[^>]*>/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+        localStore.pages[pageId] = {
+          ...localStore.pages[pageId],
+          ...updates,
+          content,
+          word_count: words,
+          updated_at: new Date().toISOString()
+        };
+        // Also update parent chapter content
+        if (localStore.chapters && localStore.chapters[chapterId]) {
+          const chapPages = (Object.values(localStore.pages) as Page[])
+            .filter(p => p.chapter_id === chapterId)
+            .sort((a, b) => a.page_number - b.page_number);
+          const combined = chapPages.map(p => p.content).filter(c => c && c.trim() !== '<p><br></p>').join('<!-- story-page-break -->');
+          localStore.chapters[chapterId].content = combined || chapPages[0]?.content || '';
+          localStore.chapters[chapterId].word_count = chapPages.reduce((acc, p) => acc + p.word_count, 0);
+        }
+        return localStore.pages[pageId];
+      }
+      return updates as Page;
+    }
+  }
+
+  async deleteChapterPage(chapterId: string, pageId: string): Promise<{ success: boolean; deleted_id: string }> {
+    try {
+      return await this.request<{ success: boolean; deleted_id: string }>(`/api/chapters/${chapterId}/pages/${pageId}`, {
+        method: 'DELETE',
+      });
+    } catch {
+      if (localStore.pages && localStore.pages[pageId]) {
+        delete localStore.pages[pageId];
+      }
+      return { success: true, deleted_id: pageId };
+    }
+  }
+
   // Characters
   async getStoryCharacters(storyId: string): Promise<Character[]> {
     try {
@@ -299,6 +510,20 @@ class ApiService {
     }
   }
 
+  async updateCharacterInvestigationStatus(
+    charId: string,
+    investigationStatus: InvestigationStatus
+  ): Promise<Character> {
+    try {
+      return await this.request<Character>(`/api/characters/${charId}/investigation-status`, {
+        method: 'PUT',
+        body: JSON.stringify({ investigation_status: investigationStatus }),
+      });
+    } catch {
+      return await this.updateCharacter(charId, { investigation_status: investigationStatus });
+    }
+  }
+
   async deleteCharacter(charId: string): Promise<{ success: boolean; deleted_id: string }> {
     try {
       return await this.request<{ success: boolean; deleted_id: string }>(`/api/characters/${charId}`, {
@@ -354,7 +579,7 @@ class ApiService {
             return { story_id: storyId, culprit_id: parsed.culprit_id };
           }
         }
-      } catch {}
+      } catch { }
       return { story_id: storyId, culprit_id: null };
     }
   }
@@ -367,7 +592,7 @@ class ApiService {
       } else {
         localStorage.removeItem(`storyweave_culprits_${storyId}`);
       }
-    } catch {}
+    } catch { }
 
     try {
       if (culpritId) {
@@ -401,7 +626,7 @@ class ApiService {
             connections: (parsed && Array.isArray(parsed.connections)) ? parsed.connections : [],
             updated_at: parsed?.updatedAt
           };
-        } catch {}
+        } catch { }
       }
       return { story_id: storyId, positions: {}, connections: [] };
     }
@@ -421,7 +646,7 @@ class ApiService {
           connections: boardData.connections,
           updatedAt: new Date().toISOString()
         }));
-      } catch {}
+      } catch { }
       return { story_id: storyId, ...boardData, updated_at: new Date().toISOString() };
     }
   }
@@ -703,7 +928,7 @@ class ApiService {
           if (parsed && Array.isArray(parsed.elements) && parsed.elements.length >= (storeBoard?.elements?.length || 20)) {
             return parsed;
           }
-        } catch {}
+        } catch { }
       }
       if (storeBoard) {
         return storeBoard;
@@ -716,7 +941,7 @@ class ApiService {
     const payload = { ...board, story_id: storyId, updated_at: new Date().toISOString() };
     try {
       localStorage.setItem(`storyweave_investigation_board_${storyId}`, JSON.stringify(payload));
-    } catch {}
+    } catch { }
 
     try {
       return await this.request<InvestigationBoardState>(`/api/stories/${storyId}/investigation-board`, {
@@ -735,13 +960,13 @@ class ApiService {
       });
       try {
         localStorage.setItem(`storyweave_investigation_board_${storyId}`, JSON.stringify(res));
-      } catch {}
+      } catch { }
       return res;
     } catch {
       const fallback = this.generateFallbackInvestigationBoard(storyId);
       try {
         localStorage.setItem(`storyweave_investigation_board_${storyId}`, JSON.stringify(fallback));
-      } catch {}
+      } catch { }
       return fallback;
     }
   }

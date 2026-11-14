@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from ..models import Character, CharacterCreate, CharacterUpdate
 from ..services.db_service import db_service
@@ -32,6 +32,21 @@ def update_character(character_id: str, data: CharacterUpdate):
         raise HTTPException(status_code=404, detail="Character dossier not found")
     update_data = {k: v for k, v in data.dict().items() if v is not None}
     existing.update(update_data)
+    return db_service.save_character(existing)
+
+@router.put("/api/characters/{character_id}/investigation-status", response_model=Character)
+def update_character_investigation_status(character_id: str, payload: Dict[str, Any]):
+    status = payload.get("investigation_status", "unclassified")
+    valid_statuses = {"innocent", "person_of_interest", "unclassified"}
+    if status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid investigation status '{status}'. Valid options: innocent, person_of_interest, unclassified."
+        )
+    existing = db_service.get_character(character_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Character dossier not found")
+    existing["investigation_status"] = status
     return db_service.save_character(existing)
 
 @router.delete("/api/characters/{character_id}")

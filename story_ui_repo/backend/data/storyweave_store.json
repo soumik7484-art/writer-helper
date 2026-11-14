@@ -131,6 +131,39 @@
       ],
       "cover_url": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
       "id": "story_27abba9759"
+    },
+    "story_test_cover_1_27dc1d": {
+      "id": "story_test_cover_1_27dc1d",
+      "title": "First Investigation",
+      "genre": "Mystery",
+      "description": "Story 1 Description",
+      "cover_url": ""
+    },
+    "story_test_cover_2_f264c1": {
+      "id": "story_test_cover_2_f264c1",
+      "title": "Second Investigation",
+      "genre": "Horror",
+      "description": "Story 2 Description",
+      "cover_url": ""
+    },
+    "story_test_cover_1_fc60c2": {
+      "id": "story_test_cover_1_fc60c2",
+      "title": "First Investigation",
+      "genre": "Mystery",
+      "description": "Story 1 Description",
+      "cover_url": ""
+    },
+    "story_test_cover_2_ea4137": {
+      "id": "story_test_cover_2_ea4137",
+      "title": "Second Investigation",
+      "genre": "Horror",
+      "description": "Story 2 Description",
+      "cover_url": ""
+    },
+    "test_direct_123": {
+      "id": "test_direct_123",
+      "title": "Test Direct",
+      "cover_url": ""
     }
   },
   "chapters": {
@@ -143,7 +176,7 @@
       "word_count": 267,
       "status": "completed",
       "created_at": "2026-11-12T19:04:10.689858",
-      "updated_at": "2026-11-12T14:06:06.940923",
+      "updated_at": "2026-11-14T09:54:28.765026",
       "content": "The rain fell against the leaded panes of 14 High Quay Street with the persistence of a dying pulse.\n\nSilas Vance adjusted the brass desk lamp, the wick sputtering as a draft slipped beneath the heavy oak door. Before him lay a couriers parcel—rough butcher paper, bound with tarred hemp string, smelling unmistakably of brine and dead kelp.\n\nHe slit the twine with his silver folding knife.\n\nInside rested an antique pocket watch. Its heavy silver casing had been blackened by sea salt, the crystal cracked diagonally from the Roman numeral nine to four. The hands were seized at precisely 3:17. When Silas pried the rear casing open with the tip of his thumbnail, no pendulum hummed. Instead, engraved into the balance cock was a single word, cut with precision: REVERIE.\n\nTucked behind the escapement was a folded strip of parchment, stiffened by seawater. It bore no signature—only six lines written in iron gall ink, and a wax seal stamped with the three-headed raven of House Blackwood.\n\nIf you value what remains of the harbor, Vance, do not let Alistair light the maritime lantern tonight.\n\nSilas stood, reaching for his wool overcoat and the Webley revolver in the top drawer. Ravenscar had buried many things beneath its cold cliffs, but tonight, the tide was coughing them back up.\n\nEvery detail of the surroundings seemed etched with quiet menace. The damp sea air clung to the stone walls, condensing into slow, bead-like droplets that trailed downward like silent tears. In the distance, the foghorn sounded at deliberate four-minute intervals—a mournful iron groan that echoed across the jagged headland."
     },
     "chap_02": {
@@ -1513,5 +1546,37 @@
       "updated_at": "2026-11-13T15:31:06.269321"
     }
   },
-  "culprits": {}
+  "culprits": {},
+  "pages": {
+    "page_chap_01_1": {
+      "id": "page_chap_01_1",
+      "chapter_id": "chap_01",
+      "page_number": 1,
+      "content": "The rain fell against the leaded panes of 14 High Quay Street with the persistence of a dying pulse.\n\nSilas Vance adjusted the brass desk lamp, the wick sputtering as a draft slipped beneath the heavy oak door. Before him lay a couriers parcel—rough butcher paper, bound with tarred hemp string, smelling unmistakably of brine and dead kelp.\n\nHe slit the twine with his silver folding knife.\n\nInside rested an antique pocket watch. Its heavy silver casing had been blackened by sea salt, the crystal cracked diagonally from the Roman numeral nine to four. The hands were seized at precisely 3:17. When Silas pried the rear casing open with the tip of his thumbnail, no pendulum hummed. Instead, engraved into the balance cock was a single word, cut with precision: REVERIE.\n\nTucked behind the escapement was a folded strip of parchment, stiffened by seawater. It bore no signature—only six lines written in iron gall ink, and a wax seal stamped with the three-headed raven of House Blackwood.\n\nIf you value what remains of the harbor, Vance, do not let Alistair light the maritime lantern tonight.\n\nSilas stood, reaching for his wool overcoat and the Webley revolver in the top drawer. Ravenscar had buried many things beneath its cold cliffs, but tonight, the tide was coughing them back up.\n\nEvery detail of the surroundings seemed etched with quiet menace. The damp sea air clung to the stone walls, condensing into slow, bead-like droplets that trailed downward like silent tears. In the distance, the foghorn sounded at deliberate four-minute intervals—a mournful iron groan that echoed across the jagged headland.",
+      "word_count": 267,
+      "save_status": "saved",
+      "created_at": "2026-11-12T19:04:10.689858",
+      "updated_at": "2026-11-14T09:54:15.542928"
+    },
+    "page_chap_02_1": {
+      "id": "page_chap_02_1",
+      "chapter_id": "chap_02",
+      "page_number": 1,
+      "content": "Blackwood Manor stood upon the jagged headland like a vulture perched over a carcass.\n\nLord Alistair Blackwood received Silas in the grand conservatory, where dying orchids hung in humid iron cages. Alistair was a man constructed of sharp angles and nervous habit, his fingers perpetually fidgeting with a heavy gold signet ring.\n\nMy sister was hysterical, Vance. Prone to nighttime wanderings, Alistair said, pouring amber port into two cut-crystal glasses without offering one. She took a boat. A tragic accident of grief.\n\nHysterical women rarely mail stopped watches with coordinates to investigators four hours before they disappear, My Lord, Silas replied softly, producing the silver timepiece from his coat pocket.\n\nAlistairs hand shook. A single droplet of dark wine spilled onto the marble floor.\n\nWhere did you get that? His voice dropped an octave, all veneer of aristocratic composure stripped clean. She kept that locked in the family reliquary. The key was buried with our father.\n\nSilas watched the lords eyes dart toward the grand grandfather clock at the end of the gallery. For a split second, Silas noticed something strange: the clocks brass pendulum was not swinging, yet a rhythmic metallic clicking echoed from behind the mahogany wainscoting.",
+      "word_count": 199,
+      "save_status": "saved",
+      "created_at": "2026-11-12T19:04:10.689858",
+      "updated_at": "2026-11-14T09:54:15.574177"
+    },
+    "page_chap_03_1": {
+      "id": "page_chap_03_1",
+      "chapter_id": "chap_03",
+      "page_number": 1,
+      "content": "The Municipal Archives smelled of vinegar, dust, and decaying leather.\n\nClara Moreau laid the parchment beneath a heavy brass magnifying lens, her spectacles reflecting the yellow glow of three tallow candles. Her finger traced the ravens crest, tracing down to the microscopic script hidden within the feather flourishes.\n\nThis is not Victorian cipher, Silas, Clara murmured, her voice breathless. It is fourteenth-century maritime code. The Order of the Iron Tide.\n\nThe smugglers?\n\nSmugglers do not build underground vaults seventy fathoms into granite cliffs, she countered, sliding an ancient harbor survey across the scarred table. Look here. In 1842, the Blackwood family financed the construction of the north breakwater. On paper, it was to protect merchant vessels. But the excavation records show six hundred tons of stone were hauled out of the reef, not deposited.\n\nShe looked up at Silas, her eyes wide with dread.\n\nWhatever was sealed beneath Ravenscar was never meant to be opened from the sea. It was meant to be unlocked from the manors cellar.",
+      "word_count": 168,
+      "save_status": "saved",
+      "created_at": "2026-11-12T19:04:10.689858",
+      "updated_at": "2026-11-14T09:54:15.600795"
+    }
+  }
 }

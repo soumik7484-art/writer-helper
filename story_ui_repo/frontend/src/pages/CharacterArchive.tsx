@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { CharacterDetailsModal } from '../components/character/CharacterDetailsModal';
 import { useStory } from '../context/StoryContext';
 import { api } from '../services/api';
-import { Character } from '../types';
+import { Character, InvestigationStatus } from '../types';
 import { Stamp } from '../components/common/Stamp';
 import { sound } from '../services/audioService';
 import { boardTextureBase64 } from '../data/boardTextureBase64';
@@ -26,7 +26,8 @@ import {
   Maximize2,
   Minimize2,
   Check,
-  ArrowLeft
+  ArrowLeft,
+  Filter
 } from 'lucide-react';
 
 export interface BoardConnection {
@@ -211,99 +212,77 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
   // Dedicated Character Dossier Selection (identified by unique, consistent ID)
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(initialCharacterId || null);
 
-  // Single culprit tracking state
-  const [culpritId, setCulpritId] = useState<string | null>(null);
-  const [culpritAnimKey, setCulpritAnimKey] = useState<number>(0);
-  const [showCulpritConfirm, setShowCulpritConfirm] = useState<{ newId: string; oldId: string | null } | null>(null);
+  // Investigation status & filtering
+  type CharacterFilter = 'all' | 'poi' | 'innocent' | 'unclassified';
+  const [characterFilter, setCharacterFilter] = useState<CharacterFilter>('all');
 
-  // Load culprit from backend / localStorage when activeStory changes
-  useEffect(() => {
-    if (!activeStory) return;
-    let cancelled = false;
-    api.getStoryCulprit(activeStory.id).then(result => {
-      if (!cancelled && result) {
-        setCulpritId(result.culprit_id || null);
-        if (result.culprit_id) setCulpritAnimKey(prev => prev + 1);
-      }
-    }).catch(() => {
-      // Fallback: try legacy localStorage format
-      try {
-        const raw = localStorage.getItem(`storyweave_culprits_${activeStory.id}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            if (!cancelled) { setCulpritId(parsed[0]); setCulpritAnimKey(prev => prev + 1); }
-          } else if (parsed && typeof parsed.culprit_id === 'string') {
-            if (!cancelled) { setCulpritId(parsed.culprit_id); setCulpritAnimKey(prev => prev + 1); }
-          }
-        }
-      } catch {}
-    });
-    return () => { cancelled = true; };
-  }, [activeStory?.id]);
+  // Independent investigation status update per character
+  const handleUpdateCharacterInvestigationStatus = useCallback(async (charId: string, newStatus: InvestigationStatus) => {
+    const char = characters.find(c => c && c.id === charId);
+    const charName = char?.name || 'Character';
 
-  // Persist culprit to backend + localStorage
-  const persistCulprit = useCallback((newCulpritId: string | null) => {
-    if (!activeStory) return;
-    api.setStoryCulprit(activeStory.id, newCulpritId).catch(() => {
-      // localStorage fallback already handled inside api.setStoryCulprit
-    });
-  }, [activeStory?.id]);
+    // Optimistically update character state
+    setCharacters(prev => prev.map(c => c.id === charId ? { ...c, investigation_status: newStatus } : c));
 
+    // Persist to backend API & MongoDB
+    try {
+      await api.updateCharacterInvestigationStatus(charId, newStatus);
+    } catch (err) {
+      console.error("Failed to persist investigation status:", err);
+    }
+
+    sound.playPaperRustle();
+    if (newStatus === 'person_of_interest') {
+      sound.playTypewriterKeystroke();
+      addToast("Person of Interest Designated", `${charName} designated as Person of Interest (POI).`, "error");
+    } else if (newStatus === 'innocent') {
+      addToast("Classified as Innocent", `${charName} classified as Innocent.`, "info");
+    } else {
+      addToast("Classification Cleared", `${charName} classification reset to Unclassified.`, "info");
+    }
+  }, [characters, addToast]);
+
+  const handleTogglePOI = useCallback((charId: string) => {
+    const char = characters.find(c => c && c.id === charId);
+    const nextStatus: InvestigationStatus = char?.investigation_status === 'person_of_interest' ? 'unclassified' : 'person_of_interest';
+    handleUpdateCharacterInvestigationStatus(charId, nextStatus);
+  }, [characters, handleUpdateCharacterInvestigationStatus]);
+
+  // Backward compatibility shims
   const handleMarkAsCulprit = useCallback((charId: string) => {
-    const charName = characters.find(c => c && c.id === charId)?.name || 'Suspect';
-    if (culpritId && culpritId !== charId) {
-      // Ask confirmation before replacing
-      setShowCulpritConfirm({ newId: charId, oldId: culpritId });
-      return;
-    }
-    if (culpritId === charId) {
-      // Already the culprit — do nothing (use Remove Culprit)
-      return;
-    }
-    setCulpritId(charId);
-    setCulpritAnimKey(prev => prev + 1);
-    persistCulprit(charId);
-    sound.playTypewriterKeystroke();
-    addToast("Culprit Identified", `${charName} marked as culprit on evidence board.`, "error");
-  }, [culpritId, characters, addToast, persistCulprit]);
-
-  const handleConfirmReplaceCulprit = useCallback(() => {
-    if (!showCulpritConfirm) return;
-    const { newId } = showCulpritConfirm;
-    const charName = characters.find(c => c && c.id === newId)?.name || 'Suspect';
-    setCulpritId(newId);
-    setCulpritAnimKey(prev => prev + 1);
-    persistCulprit(newId);
-    sound.playTypewriterKeystroke();
-    addToast("Culprit Replaced", `${charName} is now marked as the culprit.`, "error");
-    setShowCulpritConfirm(null);
-  }, [showCulpritConfirm, characters, addToast, persistCulprit]);
+    handleUpdateCharacterInvestigationStatus(charId, 'person_of_interest');
+  }, [handleUpdateCharacterInvestigationStatus]);
 
   const handleRemoveCulprit = useCallback((charId: string) => {
-    if (culpritId !== charId) return;
-    const charName = characters.find(c => c && c.id === charId)?.name || 'Suspect';
-    setCulpritId(null);
-    persistCulprit(null);
-    sound.playPaperRustle();
-    addToast("Culprit Status Removed", `${charName} mark cleared from evidence board.`, "info");
-  }, [culpritId, characters, addToast, persistCulprit]);
+    handleUpdateCharacterInvestigationStatus(charId, 'unclassified');
+  }, [handleUpdateCharacterInvestigationStatus]);
 
   const handleToggleCulprit = useCallback((charId: string) => {
-    if (culpritId === charId) {
-      handleRemoveCulprit(charId);
-    } else {
-      handleMarkAsCulprit(charId);
-    }
-  }, [culpritId, handleMarkAsCulprit, handleRemoveCulprit]);
+    handleTogglePOI(charId);
+  }, [handleTogglePOI]);
 
-  const handleSetCulprit = useCallback((charId: string, makeCulprit: boolean) => {
-    if (makeCulprit) {
-      handleMarkAsCulprit(charId);
-    } else {
-      handleRemoveCulprit(charId);
+  const handleSetCulprit = useCallback((charId: string, isPOI: boolean) => {
+    handleUpdateCharacterInvestigationStatus(charId, isPOI ? 'person_of_interest' : 'innocent');
+  }, [handleUpdateCharacterInvestigationStatus]);
+
+  // Filter calculations
+  const poiCount = useMemo(() => characters.filter(c => c.investigation_status === 'person_of_interest').length, [characters]);
+  const innocentCount = useMemo(() => characters.filter(c => c.investigation_status === 'innocent').length, [characters]);
+  const unclassifiedCount = useMemo(() => characters.filter(c => !c.investigation_status || c.investigation_status === 'unclassified').length, [characters]);
+  const allCount = characters.length;
+
+  const filteredCharacters = useMemo(() => {
+    if (characterFilter === 'poi') {
+      return characters.filter(c => c.investigation_status === 'person_of_interest');
     }
-  }, [handleMarkAsCulprit, handleRemoveCulprit]);
+    if (characterFilter === 'innocent') {
+      return characters.filter(c => c.investigation_status === 'innocent');
+    }
+    if (characterFilter === 'unclassified') {
+      return characters.filter(c => !c.investigation_status || c.investigation_status === 'unclassified');
+    }
+    return characters;
+  }, [characters, characterFilter]);
 
   useEffect(() => {
     if (initialCharacterId !== undefined) {
@@ -404,7 +383,6 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
         if (selectedCharacterId) {
           handleCloseDossier();
         }
-        setShowCulpritConfirm(null);
         setNewConnModal(null);
         setEditingConnection(null);
         setModalOpen(false);
@@ -1213,6 +1191,107 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
           </div>
         </div>
 
+        {/* ── INVESTIGATION DOSSIER FILTER BAR ── */}
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1C1713]/90 backdrop-blur-md px-4 py-2.5 rounded-xl border border-[#382E24] shadow-md">
+          <div className="flex items-center space-x-2">
+            <span className="font-typewriter text-[11px] font-bold text-[#A69482] uppercase tracking-wider flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-[#C49A61]" />
+              <span>Filter Dossiers:</span>
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* All Characters */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPaperRustle();
+                setCharacterFilter('all');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-typewriter text-xs font-bold uppercase transition-all flex items-center space-x-1.5 ${
+                characterFilter === 'all'
+                  ? 'bg-[#C49A61] text-[#14100D] shadow'
+                  : 'bg-[#2A2016] text-[#A69482] hover:text-[#E0D7C7] border border-[#3E3024]'
+              }`}
+            >
+              <span>All Characters</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                characterFilter === 'all' ? 'bg-[#14100D] text-[#C49A61] font-bold' : 'bg-[#14100D]/60 text-[#8C7A68]'
+              }`}>
+                {allCount}
+              </span>
+            </button>
+
+            {/* Persons of Interest */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPaperRustle();
+                setCharacterFilter('poi');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-typewriter text-xs font-bold uppercase transition-all flex items-center space-x-1.5 ${
+                characterFilter === 'poi'
+                  ? 'bg-[#B03A2E] text-white shadow-lg ring-1 ring-red-400 font-black'
+                  : 'bg-[#2A2016] text-[#E5A8A3] hover:bg-[#3D1E1A] border border-[#8C2E24]/60'
+              }`}
+              title="Display only characters explicitly marked as Person of Interest"
+            >
+              <span className="w-2 h-2 rounded-full bg-[#E74C3C] animate-pulse" />
+              <span>Persons of Interest</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                characterFilter === 'poi' ? 'bg-white text-[#B03A2E] font-black' : 'bg-[#14100D]/60 text-[#E5A8A3]'
+              }`}>
+                {poiCount}
+              </span>
+            </button>
+
+            {/* Innocent */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPaperRustle();
+                setCharacterFilter('innocent');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-typewriter text-xs font-bold uppercase transition-all flex items-center space-x-1.5 ${
+                characterFilter === 'innocent'
+                  ? 'bg-[#2E4729] text-[#C9ECC5] border border-[#5E9454] shadow font-black'
+                  : 'bg-[#2A2016] text-[#A8C7A0] hover:text-[#C9ECC5] border border-[#3E3024]'
+              }`}
+              title="Display only characters classified as Innocent"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-[#86BA7D]" />
+              <span>Innocent</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                characterFilter === 'innocent' ? 'bg-[#14100D] text-[#A5DE9E] font-bold' : 'bg-[#14100D]/60 text-[#8C7A68]'
+              }`}>
+                {innocentCount}
+              </span>
+            </button>
+
+            {/* Unclassified */}
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPaperRustle();
+                setCharacterFilter('unclassified');
+              }}
+              className={`px-3 py-1.5 rounded-lg font-typewriter text-xs font-bold uppercase transition-all flex items-center space-x-1.5 ${
+                characterFilter === 'unclassified'
+                  ? 'bg-[#5A493B] text-[#F0E6D8] border border-[#8C7456] shadow font-bold'
+                  : 'bg-[#2A2016] text-[#8C7A68] hover:text-[#D4C5B3] border border-[#3E3024]'
+              }`}
+              title="Display characters with unclassified investigation status"
+            >
+              <span>Unclassified</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                characterFilter === 'unclassified' ? 'bg-[#14100D] text-[#E0D7C7] font-bold' : 'bg-[#14100D]/60 text-[#8C7A68]'
+              }`}>
+                {unclassifiedCount}
+              </span>
+            </button>
+          </div>
+        </div>
+
         {/* Linking Instructions Banner (Active when tying thread) */}
         {connectingSourceId && (
           <div className="bg-[#2D120F] border-2 border-[#C0392B] p-3 rounded-xl flex items-center justify-between text-xs font-typewriter text-[#F2D7D4] shadow-xl animate-pulse">
@@ -1306,6 +1385,13 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
 
               {connections.map(conn => {
                 if (!conn || !conn.sourceId || !conn.targetId) return null;
+                // Only render connection if both characters match the active filter
+                if (characterFilter !== 'all') {
+                  const visibleIds = new Set(filteredCharacters.map(c => c.id));
+                  if (!visibleIds.has(conn.sourceId) || !visibleIds.has(conn.targetId)) {
+                    return null;
+                  }
+                }
                 const posA = positions[conn.sourceId] || latestPositionsRef.current[conn.sourceId];
                 const posB = positions[conn.targetId] || latestPositionsRef.current[conn.targetId];
                 if (!posA || !posB) return null;
@@ -1407,6 +1493,13 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
             <div className="absolute inset-0 pointer-events-none z-20">
               {connections.map(conn => {
                 if (!conn || !conn.sourceId || !conn.targetId) return null;
+                // Only render connection if both characters match the active filter
+                if (characterFilter !== 'all') {
+                  const visibleIds = new Set(filteredCharacters.map(c => c.id));
+                  if (!visibleIds.has(conn.sourceId) || !visibleIds.has(conn.targetId)) {
+                    return null;
+                  }
+                }
                 const posA = positions[conn.sourceId] || latestPositionsRef.current[conn.sourceId];
                 const posB = positions[conn.targetId] || latestPositionsRef.current[conn.targetId];
                 if (!posA || !posB) return null;
@@ -1461,14 +1554,15 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
 
             {/* Pinned Character Portrait Cards */}
             <div className="absolute inset-0 z-20 pointer-events-none">
-              {characters.map(char => {
+              {(characterFilter === 'all' ? characters : filteredCharacters).map(char => {
                 if (!char || !char.id) return null;
                 const pos = positions[char.id] || latestPositionsRef.current[char.id] || { x: 40, y: 40 };
                 const posX = Number.isFinite(pos?.x) ? pos.x : 40;
                 const posY = Number.isFinite(pos?.y) ? pos.y : 40;
                 const isSource = connectingSourceId === char.id;
                 const isValidTarget = connectingSourceId && connectingSourceId !== char.id;
-                const isCulprit = culpritId === char.id;
+                const isPOI = char.investigation_status === 'person_of_interest';
+                const isInnocent = char.investigation_status === 'innocent';
                 const isDraggingThis = draggingCharId === char.id;
 
                 return (
@@ -1515,47 +1609,53 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                       </div>
                     </div>
 
-                    {/* Red Culprit Pin / Indicator on Border Area */}
+                    {/* Top-Right POI Pin / Indicator on Border Area */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (isCulprit) {
-                          handleRemoveCulprit(char.id);
-                        } else {
-                          handleMarkAsCulprit(char.id);
-                        }
+                        handleTogglePOI(char.id);
                       }}
                       className={`absolute -top-2.5 -right-2.5 z-35 flex items-center justify-center transition-all ${
-                        isCulprit
+                        isPOI
+                          ? 'opacity-100 scale-100 hover:scale-110'
+                          : isInnocent
                           ? 'opacity-100 scale-100 hover:scale-110'
                           : 'opacity-0 group-hover:opacity-85 hover:!opacity-100 scale-90 hover:scale-105'
                       }`}
-                      title={isCulprit ? "Culprit Identified — Click to remove" : "Click to Mark as Culprit"}
+                      title={isPOI ? "Designated as Person of Interest — Click to clear" : isInnocent ? "Classified as Innocent — Click to clear" : "Click to designate as Person of Interest (POI)"}
                     >
-                      <div className="relative w-6 h-6 rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.65),0_0_10px_rgba(192,57,43,0.5)] flex items-center justify-center">
-                        <div 
-                          className="absolute inset-0 rounded-full border-2 border-[#4A0E0B]"
-                          style={{
-                            background: isCulprit 
-                              ? 'radial-gradient(circle at 35% 35%, #FF5A4E 0%, #D32F2F 45%, #9A1C16 80%, #5E0D08 100%)'
-                              : 'radial-gradient(circle at 35% 35%, #8C7558 0%, #524131 60%, #2A2016 100%)',
-                          }}
-                        />
-                        <div className="relative w-3 h-3 rounded-full border border-white/70 flex items-center justify-center shadow-inner">
-                          <div className={`w-1.5 h-1.5 rounded-full ${isCulprit ? 'bg-white shadow-[0_0_3px_rgba(255,255,255,0.9)]' : 'bg-red-400'}`} />
+                      {isPOI ? (
+                        <div className="relative w-6 h-6 rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.65),0_0_10px_rgba(192,57,43,0.5)] flex items-center justify-center">
+                          <div 
+                            className="absolute inset-0 rounded-full border-2 border-[#4A0E0B]"
+                            style={{
+                              background: 'radial-gradient(circle at 35% 35%, #FF5A4E 0%, #D32F2F 45%, #9A1C16 80%, #5E0D08 100%)',
+                            }}
+                          />
+                          <div className="relative w-3 h-3 rounded-full border border-white/70 flex items-center justify-center shadow-inner">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_3px_rgba(255,255,255,0.9)]" />
+                          </div>
+                          <div 
+                            className="absolute top-0.5 left-1 w-1.5 h-1 rounded-full bg-white/60 -rotate-30 pointer-events-none"
+                            style={{ filter: 'blur(0.2px)' }}
+                          />
                         </div>
-                        <div 
-                          className="absolute top-0.5 left-1 w-1.5 h-1 rounded-full bg-white/60 -rotate-30 pointer-events-none"
-                          style={{ filter: 'blur(0.2px)' }}
-                        />
-                      </div>
+                      ) : isInnocent ? (
+                        <div className="relative w-5 h-5 rounded-full shadow border border-[#5E9454] bg-[#2E4729] flex items-center justify-center">
+                          <UserCheck className="w-3 h-3 text-[#A5DE9E]" />
+                        </div>
+                      ) : (
+                        <div className="relative w-5 h-5 rounded-full shadow border border-[#4A3B2C] bg-[#2A2016] flex items-center justify-center text-[#A69482] hover:text-[#E0D7C7]">
+                          <span className="text-[9px] font-bold">+</span>
+                        </div>
+                      )}
                     </button>
 
-                    {/* Hand-Drawn Red Marker Highlight for Culprit */}
-                    {isCulprit && (
+                    {/* Hand-Drawn Red Marker Highlight for Person of Interest */}
+                    {isPOI && (
                       <div 
-                        key={`culprit-marker-${char.id}-${culpritAnimKey}`}
+                        key={`poi-marker-${char.id}`}
                         className="absolute -inset-5 pointer-events-none z-30 overflow-visible"
                         style={{ filter: 'drop-shadow(0 2px 5px rgba(180, 20, 20, 0.45))' }}
                       >
@@ -1605,7 +1705,7 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                             className="marker-stroke-subtle"
                           />
 
-                          {/* Main vibrant hand-drawn marker stroke: organic irregular loop with overlap at top */}
+                          {/* Main vibrant hand-drawn marker stroke */}
                           <path
                             d="M 102 18 C 136 15 170 40 176 88 C 182 134 172 184 136 212 C 106 226 68 224 40 204 C 16 186 10 142 12 96 C 14 48 44 19 92 16 C 118 14 146 20 162 30"
                             stroke="#DC2626"
@@ -1617,7 +1717,7 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                             className="marker-stroke-main"
                           />
 
-                          {/* Overlapping top flourish: authentic felt-pen second pass or closure overlap */}
+                          {/* Overlapping top flourish */}
                           <path
                             d="M 88 15 C 108 14 134 17 154 26 C 164 31 170 38 171 44"
                             stroke="#EF4444"
@@ -1629,20 +1729,26 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                           />
                         </svg>
 
-                        {/* Authentic CULPRIT Tag near marked character */}
+                        {/* Authentic PERSON OF INTEREST Tag near marked character */}
                         <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 pointer-events-none z-40 flex items-center justify-center">
-                          <div className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-[#B03A2E] text-white border-2 border-[#FFCDD2] shadow-[0_2px_10px_rgba(176,58,46,0.7)] transform -rotate-1">
+                          <div className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-[#9A1C16] text-white border-2 border-[#FFCDD2] shadow-[0_2px_10px_rgba(154,28,22,0.7)] transform -rotate-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                            <span className="font-typewriter text-[10px] font-black tracking-widest uppercase">
-                              CULPRIT
+                            <span className="font-typewriter text-[9px] font-black tracking-widest uppercase">
+                              PERSON OF INTEREST
                             </span>
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Polaroid Frame: Image + Name underneath ONLY */}
-                    <div className="bg-[#EFECE6] p-2.5 pb-3 rounded shadow-2xl border border-[#2D2118] text-center overflow-hidden">
+                    {/* Polaroid Frame: Image + Name underneath */}
+                    <div className={`p-2.5 pb-3 rounded shadow-2xl text-center overflow-hidden transition-all ${
+                      isPOI
+                        ? 'bg-[#F2ECE6] border-2 border-[#B03A2E] ring-1 ring-[#B03A2E]/50 shadow-[0_6px_20px_rgba(176,58,46,0.3)]'
+                        : isInnocent
+                        ? 'bg-[#EFECE6] border border-[#5E8C58]/60 shadow-lg'
+                        : 'bg-[#EFECE6] border border-[#2D2118]'
+                    }`}>
                       <div className="w-full h-[122px] bg-[#1a1a1a] rounded-sm overflow-hidden border border-black/20 shadow-inner relative">
                         <img
                           src={char.portrait_url}
@@ -1658,6 +1764,17 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                           }`} 
                           title={`Status: ${char.current_status}`}
                         />
+                        {isPOI && (
+                          <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-[#9A1C16]/90 border border-white/40 text-white font-typewriter text-[8px] font-black tracking-wider uppercase shadow">
+                            POI
+                          </div>
+                        )}
+                        {isInnocent && (
+                          <div className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded bg-[#2D4A27]/90 border border-white/40 text-[#D4ECD0] font-typewriter text-[8px] font-bold tracking-wider uppercase shadow flex items-center gap-0.5">
+                            <UserCheck className="w-2 h-2" />
+                            <span>INNOCENT</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* ONLY Character Name underneath image */}
@@ -1698,21 +1815,17 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isCulprit) {
-                              handleRemoveCulprit(char.id);
-                            } else {
-                              handleMarkAsCulprit(char.id);
-                            }
+                            handleTogglePOI(char.id);
                           }}
                           className={`px-1 py-1 rounded text-[9px] font-typewriter font-bold uppercase transition-all flex items-center justify-center gap-0.5 shadow-sm ${
-                            isCulprit
-                              ? 'bg-[#B03A2E] text-white hover:bg-[#8F1D14] ring-1 ring-red-300'
+                            isPOI
+                              ? 'bg-[#B03A2E] text-white hover:bg-[#8F1D14] ring-1 ring-red-300 font-black'
                               : 'bg-[#2B1714] text-[#E5A8A3] hover:bg-[#B03A2E] hover:text-white border border-[#8C2E24]'
                           }`}
-                          title={isCulprit ? "Remove culprit designation" : "Mark as primary culprit"}
+                          title={isPOI ? "Remove Person of Interest designation" : "Designate as Person of Interest (POI)"}
                         >
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCulprit ? 'bg-white' : 'bg-[#E74C3C]'}`} />
-                          <span className="truncate">{isCulprit ? 'Culprit' : 'Mark'}</span>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isPOI ? 'bg-white' : 'bg-[#E74C3C]'}`} />
+                          <span className="truncate">{isPOI ? 'POI' : 'Mark POI'}</span>
                         </button>
                       </div>
                     </div>
@@ -1720,6 +1833,29 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
                 );
               })}
             </div>
+
+            {/* Filtered Empty State Prompt on Board */}
+            {characterFilter !== 'all' && filteredCharacters.length === 0 && characters.length > 0 && (
+              <div className="absolute inset-0 flex items-center justify-center z-25 p-6 text-center">
+                <div className="max-w-md bg-[#1C1713]/90 backdrop-blur-md p-6 rounded-xl border border-[#382E24] shadow-2xl space-y-3">
+                  <div className="w-10 h-10 mx-auto rounded-full bg-[#C49A61]/20 flex items-center justify-center text-[#C49A61]">
+                    <Filter className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-[#EFE7DC]">No Dossiers Match Filter</h3>
+                    <p className="font-typewriter text-xs text-[#A69482] mt-1 leading-relaxed">
+                      No suspects currently match the "{characterFilter === 'poi' ? 'Persons of Interest' : characterFilter === 'innocent' ? 'Innocent' : 'Unclassified'}" classification.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setCharacterFilter('all')}
+                    className="px-4 py-1.5 rounded bg-[#C49A61] text-[#14100D] font-typewriter text-xs uppercase font-bold tracking-wider shadow"
+                  >
+                    View All Characters ({allCount})
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Empty State Prompt */}
             {characters.length === 0 && !loading && (
@@ -1765,73 +1901,111 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
           </BoardCanvasErrorBoundary>
         ) : (
           /* Detailed Cards Index Grid */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {characters.map(char => {
-              const isCulprit = culpritId === char.id;
-              return (
-                <div
-                  key={char.id}
-                  onClick={(e) => handleCardClick(char.id, e)}
-                  className="bg-[#1C1713] hover:bg-[#231D18] p-4 rounded-xl border border-[#382E24] cursor-pointer shadow-lg space-y-3 transition-colors flex items-start gap-4 hover:-translate-y-1 relative"
-                >
-                  <div className="w-16 h-16 rounded-md overflow-hidden shrink-0 border border-[#C49A61]/40 bg-[#1a1a1a] shadow relative">
-                    <img src={char.portrait_url} alt={char.name} className="w-full h-full object-cover" />
-                    {isCulprit && (
-                      <div className="absolute top-0.5 right-0.5 z-10 pointer-events-none" title="Marked as Culprit">
-                        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#FF5A4E] to-[#9A1C16] border border-[#4A0E0B] shadow flex items-center justify-center">
-                          <div className="w-1 h-1 rounded-full bg-white"></div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredCharacters.map(char => {
+                const isPOI = char.investigation_status === 'person_of_interest';
+                const isInnocent = char.investigation_status === 'innocent';
+                return (
+                  <div
+                    key={char.id}
+                    onClick={(e) => handleCardClick(char.id, e)}
+                    className={`p-4 rounded-xl border cursor-pointer shadow-lg space-y-3 transition-all flex items-start gap-4 hover:-translate-y-1 relative ${
+                      isPOI
+                        ? 'bg-[#221612] hover:bg-[#2A1B16] border-[#B03A2E]/70 shadow-[0_4px_16px_rgba(176,58,46,0.2)] ring-1 ring-[#B03A2E]/30'
+                        : isInnocent
+                        ? 'bg-[#181C16] hover:bg-[#1E231C] border-[#4A6B42]/50'
+                        : 'bg-[#1C1713] hover:bg-[#231D18] border-[#382E24]'
+                    }`}
+                  >
+                    <div className="w-16 h-16 rounded-md overflow-hidden shrink-0 border border-[#C49A61]/40 bg-[#1a1a1a] shadow relative">
+                      <img src={char.portrait_url} alt={char.name} className="w-full h-full object-cover" />
+                      {isPOI && (
+                        <div className="absolute top-0.5 right-0.5 z-10 pointer-events-none" title="Person of Interest">
+                          <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#FF5A4E] to-[#9A1C16] border border-[#4A0E0B] shadow flex items-center justify-center">
+                            <div className="w-1 h-1 rounded-full bg-white"></div>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="font-serif text-base font-bold text-[#F2E8DC] truncate">{char.name}</h4>
-                        {isCulprit && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#B03A2E] text-white border border-[#FFCDD2] text-[9px] font-typewriter font-black tracking-wider uppercase shadow">
-                            CULPRIT
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] font-typewriter px-1.5 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
-                        {char.current_status}
-                      </span>
+                      )}
+                      {isInnocent && (
+                        <div className="absolute top-0.5 right-0.5 z-10 pointer-events-none" title="Classified as Innocent">
+                          <div className="w-4 h-4 rounded-full bg-[#2E4729] border border-[#78966A] shadow flex items-center justify-center">
+                            <div className="w-1 h-1 rounded-full bg-[#A5DE9E]"></div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <p className="font-typewriter text-xs text-[#C49A61] mt-0.5">{char.role}</p>
-                    <p className="font-serif text-xs text-[#A69482] line-clamp-2 mt-1 leading-snug">
-                      {char.backstory || "Personal background catalogued in dossier."}
-                    </p>
-                    <div className="pt-2 mt-2 border-t border-[#2E241C] flex items-center justify-between">
-                      <span className="text-[10px] font-typewriter text-[#8C7A68]">
-                        {isCulprit ? "Primary Culprit Designation" : "Click to view dossier"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isCulprit) {
-                            handleRemoveCulprit(char.id);
-                          } else {
-                            handleMarkAsCulprit(char.id);
-                          }
-                        }}
-                        className={`px-2.5 py-1 rounded text-[11px] font-typewriter font-bold uppercase transition-all flex items-center space-x-1.5 ${
-                          isCulprit
-                            ? 'bg-[#B03A2E] text-white hover:bg-[#8F1D14] ring-1 ring-red-300'
-                            : 'bg-[#2B1714] text-[#E5A8A3] hover:bg-[#B03A2E] hover:text-white border border-[#8C2E24]'
-                        }`}
-                        title={isCulprit ? "Remove culprit designation" : "Mark as primary culprit"}
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full ${isCulprit ? 'bg-white' : 'bg-[#E74C3C]'}`} />
-                        <span>{isCulprit ? 'Remove Culprit' : 'Mark as Culprit'}</span>
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-serif text-base font-bold text-[#F2E8DC] truncate">{char.name}</h4>
+                          {isPOI && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#9A1C16] text-white border border-[#FFCDD2] text-[9px] font-typewriter font-black tracking-wider uppercase shadow flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                              <span>PERSON OF INTEREST</span>
+                            </span>
+                          )}
+                          {isInnocent && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#243821] text-[#C9ECC5] border border-[#5E9454]/60 text-[9px] font-typewriter font-bold tracking-wider uppercase shadow flex items-center gap-1">
+                              <UserCheck className="w-2.5 h-2.5 text-[#A5DE9E]" />
+                              <span>INNOCENT</span>
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-typewriter px-1.5 py-0.5 rounded bg-emerald-950/40 text-emerald-300 border border-emerald-800/40">
+                          {char.current_status}
+                        </span>
+                      </div>
+                      <p className="font-typewriter text-xs text-[#C49A61] mt-0.5">{char.role}</p>
+                      <p className="font-serif text-xs text-[#A69482] line-clamp-2 mt-1 leading-snug">
+                        {char.backstory || "Personal background catalogued in dossier."}
+                      </p>
+                      <div className="pt-2 mt-2 border-t border-[#2E241C] flex items-center justify-between">
+                        <span className="text-[10px] font-typewriter text-[#8C7A68]">
+                          {isPOI ? "Status: Person of Interest (POI)" : isInnocent ? "Status: Classified as Innocent" : "Click to view dossier"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTogglePOI(char.id);
+                          }}
+                          className={`px-2.5 py-1 rounded text-[11px] font-typewriter font-bold uppercase transition-all flex items-center space-x-1.5 ${
+                            isPOI
+                              ? 'bg-[#B03A2E] text-white hover:bg-[#8F1D14] ring-1 ring-red-300 font-black'
+                              : 'bg-[#2B1714] text-[#E5A8A3] hover:bg-[#B03A2E] hover:text-white border border-[#8C2E24]'
+                          }`}
+                          title={isPOI ? "Remove Person of Interest designation" : "Designate as Person of Interest (POI)"}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${isPOI ? 'bg-white' : 'bg-[#E74C3C]'}`} />
+                          <span>{isPOI ? 'Remove POI' : 'Mark as POI'}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Empty filtered roster state */}
+            {characterFilter !== 'all' && filteredCharacters.length === 0 && characters.length > 0 && (
+              <div className="p-12 text-center bg-[#1C1713]/80 rounded-xl border border-[#382E24] shadow space-y-3">
+                <div className="w-12 h-12 mx-auto rounded-full bg-[#C49A61]/20 flex items-center justify-center text-[#C49A61]">
+                  <Filter className="w-6 h-6" />
                 </div>
-              );
-            })}
-          </div>
+                <h3 className="font-serif text-lg font-bold text-[#EFE7DC]">No Character Dossiers Found</h3>
+                <p className="font-typewriter text-xs text-[#A69482] max-w-sm mx-auto">
+                  No characters are currently catalogued under the "{characterFilter === 'poi' ? 'Persons of Interest' : characterFilter === 'innocent' ? 'Innocent' : 'Unclassified'}" classification filter.
+                </p>
+                <button
+                  onClick={() => setCharacterFilter('all')}
+                  className="px-4 py-1.5 rounded bg-[#C49A61] text-[#14100D] font-typewriter text-xs uppercase font-bold tracking-wider shadow"
+                >
+                  Show All Characters ({allCount})
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -1842,15 +2016,10 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
             characterId={selectedCharacterId}
             storyId={activeStory?.id}
             allCharacters={characters}
-            isCulprit={selectedCharacterId ? culpritId === selectedCharacterId : false}
-            onToggleCulprit={() => {
+            investigationStatus={characters.find(c => c.id === selectedCharacterId)?.investigation_status}
+            onChangeInvestigationStatus={(newStatus) => {
               if (selectedCharacterId) {
-                handleToggleCulprit(selectedCharacterId);
-              }
-            }}
-            onSetCulprit={(isCulpritVal) => {
-              if (selectedCharacterId) {
-                handleSetCulprit(selectedCharacterId, isCulpritVal);
+                setCharacters(prev => prev.map(c => c.id === selectedCharacterId ? { ...c, investigation_status: newStatus } : c));
               }
             }}
             onClose={handleCloseDossier}
@@ -1864,49 +2033,6 @@ export const CharacterArchive: React.FC<CharacterArchiveProps> = ({
           />
         )}
       </AnimatePresence>
-
-      {/* ── MODAL: CONFIRM REPLACE CULPRIT ── */}
-      {showCulpritConfirm && (
-        <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setShowCulpritConfirm(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md bg-[#D6C5A9] p-6 sm:p-7 rounded-xl border-2 border-[#8F7454] shadow-2xl text-[#2B2117] space-y-4 my-auto"
-          >
-            <div className="flex items-center space-x-2 text-[#8A2B20] border-b border-[#6E5A44]/40 pb-3">
-              <Target className="w-5 h-5 text-[#C0392B]" />
-              <h3 className="font-serif text-xl font-bold text-[#1E1711]">
-                Replace Identified Culprit?
-              </h3>
-            </div>
-            <p className="font-typewriter text-xs text-[#543F2D] leading-relaxed">
-              <strong>{characters.find(c => c && c.id === showCulpritConfirm.oldId)?.name || 'Current suspect'}</strong> is currently designated as the primary culprit on the evidence board.
-            </p>
-            <p className="font-typewriter text-xs text-[#543F2D] leading-relaxed">
-              Would you like to transfer the culprit designation and hand-drawn marker to <strong>{characters.find(c => c && c.id === showCulpritConfirm.newId)?.name || 'Selected suspect'}</strong>?
-            </p>
-            <div className="pt-3 border-t border-[#8F7556]/40 flex items-center justify-end space-x-2.5">
-              <button
-                type="button"
-                onClick={() => setShowCulpritConfirm(null)}
-                className="px-4 py-2 rounded border border-[#6B553E] text-[#2B2117] font-bold uppercase hover:bg-black/5 font-typewriter text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmReplaceCulprit}
-                className="px-4 py-2 rounded bg-[#8A2B20] hover:bg-[#A8382C] text-white font-bold uppercase font-typewriter text-xs shadow flex items-center space-x-1.5"
-              >
-                <Target className="w-3.5 h-3.5" />
-                <span>Transfer Culprit Mark</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── MODAL 1: DEFINE RELATIONSHIP (NEW THREAD CONNECTION) ── */}
       {newConnModal && (

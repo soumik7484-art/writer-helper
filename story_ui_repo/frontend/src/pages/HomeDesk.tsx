@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStory } from '../context/StoryContext';
 import { api } from '../services/api';
 import { NavTab } from '../components/common/Navbar';
@@ -15,7 +15,8 @@ import {
   PenTool, 
   Brain, 
   ArrowRight,
-  FileText
+  FileText,
+  Upload
 } from 'lucide-react';
 import { Chapter, Character, TimelineEvent, Memory, PlotHole } from '../types';
 
@@ -24,13 +25,67 @@ interface HomeDeskProps {
 }
 
 export const HomeDesk: React.FC<HomeDeskProps> = ({ onNavigate }) => {
-  const { activeStory, stories } = useStory();
+  const { activeStory, stories, updateStoryInContext, addToast } = useStory();
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [plotholes, setPlotholes] = useState<PlotHole[]>([]);
   const [, setLoading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeStory) return;
+
+    const validExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!validExts.includes(ext)) {
+      addToast("Invalid Format", "Please select a JPG, JPEG, PNG, or WEBP image file.", "error");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      addToast("File Too Large", "Cover image must be 10MB or less.", "error");
+      return;
+    }
+
+    try {
+      setUploadingCover(true);
+      sound.playPaperRustle();
+      addToast("Uploading Photograph", "Committing custom image to case file...", "info");
+
+      const res = await api.uploadStoryCover(activeStory.id, file);
+      updateStoryInContext(res.story);
+      sound.playTypewriterKeystroke();
+      addToast("Dossier Photograph Updated", "New cover image pinned to Primary Dossier.", "success");
+    } catch (err: any) {
+      addToast("Upload Failed", err.message || "Failed to upload cover image.", "error");
+    } finally {
+      setUploadingCover(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveCover = async () => {
+    if (!activeStory) return;
+    if (!window.confirm("Remove custom photograph from this story dossier?")) return;
+
+    try {
+      setUploadingCover(true);
+      const res = await api.removeStoryCover(activeStory.id);
+      updateStoryInContext(res.story);
+      sound.playPaperRustle();
+      addToast("Photograph Removed", "Default evidence archive placeholder restored.", "info");
+    } catch (err: any) {
+      addToast("Remove Failed", err.message || "Could not remove cover photograph.", "error");
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeStory) return;
@@ -146,15 +201,54 @@ export const HomeDesk: React.FC<HomeDeskProps> = ({ onNavigate }) => {
 
             {/* Story Visual & Premise Summary */}
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 my-4">
-              <div className="shrink-0">
-                <Polaroid
-                  imageUrl={activeStory?.cover_url || "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop"}
-                  caption={activeStory?.setting || "Scene Evidence"}
-                  subcaption={activeStory?.time_period || "Case Location"}
-                  rotation={-2}
-                  pinned={true}
-                  size="sm"
-                />
+              <div className="shrink-0 flex flex-col items-center">
+                <div className="relative">
+                  <Polaroid
+                    imageUrl={activeStory?.cover_url || undefined}
+                    caption={activeStory?.setting || "Scene Evidence"}
+                    subcaption={activeStory?.time_period || "Case Location"}
+                    rotation={-2}
+                    pinned={true}
+                    size="sm"
+                  />
+                  {uploadingCover && (
+                    <div className="absolute inset-0 bg-black/60 rounded-sm flex flex-col items-center justify-center z-30 text-[#E0B77D] font-sans text-xs">
+                      <span className="w-5 h-5 border-2 border-[#C49A61] border-t-transparent rounded-full animate-spin mb-1.5" />
+                      <span>Pinning Photo...</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Elegant Image Upload Controls */}
+                <div className="mt-2.5 flex flex-col items-center gap-1 w-full">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleCoverUpload}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingCover || !activeStory}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-[#241C15] hover:bg-[#34261B] text-[#DDAE72] hover:text-[#FFF4E4] border border-[#524131] font-sans text-xs font-semibold shadow-sm transition-all"
+                    title={activeStory?.cover_url ? "Replace existing cover photograph" : "Upload custom cover photograph"}
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#C49A61]" />
+                    <span>{activeStory?.cover_url ? "Change Photograph" : "Upload Cover Image"}</span>
+                  </button>
+
+                  {activeStory?.cover_url && (
+                    <button
+                      onClick={handleRemoveCover}
+                      disabled={uploadingCover}
+                      className="text-[11px] text-[#8F332B] hover:text-[#B4473E] font-sans font-medium underline transition-colors"
+                      title="Remove custom photograph and restore placeholder"
+                    >
+                      Remove Photograph
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex-1 space-y-4">

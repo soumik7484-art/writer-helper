@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStory } from '../context/StoryContext';
 import { api } from '../services/api';
 import { NavTab } from '../components/common/Navbar';
@@ -12,7 +12,8 @@ import {
   ArrowRight,
   BookMarked,
   Filter,
-  Check
+  Check,
+  Upload
 } from 'lucide-react';
 import { Genre, Story } from '../types';
 
@@ -21,9 +22,43 @@ interface MyStoriesProps {
 }
 
 export const MyStories: React.FC<MyStoriesProps> = ({ onNavigate }) => {
-  const { stories, activeStory, setActiveStoryId, refreshStories, addToast } = useStory();
+  const { stories, activeStory, setActiveStoryId, refreshStories, updateStoryInContext, addToast } = useStory();
   const [selectedGenre, setSelectedGenre] = useState<string>('All');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploadingStoryId, setUploadingStoryId] = useState<string | null>(null);
+
+  const handleStoryCoverUpload = async (storyId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validExts = ['jpg', 'jpeg', 'png', 'webp'];
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!validExts.includes(ext)) {
+      addToast("Invalid Format", "Please select a JPG, JPEG, PNG, or WEBP image file.", "error");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      addToast("File Too Large", "Cover image must be 10MB or less.", "error");
+      return;
+    }
+
+    try {
+      setUploadingStoryId(storyId);
+      sound.playPaperRustle();
+      addToast("Uploading Photograph", "Pinning new cover image to story...", "info");
+
+      const res = await api.uploadStoryCover(storyId, file);
+      updateStoryInContext(res.story);
+      sound.playTypewriterKeystroke();
+      addToast("Cover Updated", "New cover image saved to dossier.", "success");
+    } catch (err: any) {
+      addToast("Upload Failed", err.message || "Failed to upload image.", "error");
+    } finally {
+      setUploadingStoryId(null);
+      e.target.value = '';
+    }
+  };
 
   const genres = ['All', 'Mystery', 'Horror', 'Fantasy', 'Sci-Fi', 'Romance', 'Adventure'];
 
@@ -135,7 +170,7 @@ export const MyStories: React.FC<MyStoriesProps> = ({ onNavigate }) => {
                 <div className="flex items-start gap-4 mb-4">
                   <div className="w-28 sm:w-32 shrink-0">
                     <Polaroid
-                      imageUrl={story.cover_url || "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop"}
+                      imageUrl={story.cover_url || undefined}
                       caption={story.genre}
                       rotation={-1}
                       size="xs"
@@ -165,14 +200,30 @@ export const MyStories: React.FC<MyStoriesProps> = ({ onNavigate }) => {
 
               {/* Action Buttons */}
               <div className="mt-5 pt-3 border-t border-[#2C231B] flex items-center justify-between">
-                <button
-                  onClick={() => handleDelete(story.id, story.title)}
-                  disabled={deletingId === story.id}
-                  className="p-1.5 rounded text-[#80352F] hover:text-[#B4473E] hover:bg-red-950/20 transition-colors"
-                  title="Incinerate Case"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => handleDelete(story.id, story.title)}
+                    disabled={deletingId === story.id}
+                    className="p-1.5 rounded text-[#80352F] hover:text-[#B4473E] hover:bg-red-950/20 transition-colors"
+                    title="Incinerate Case"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                  <label
+                    className="p-1.5 rounded text-[#C49A61] hover:text-[#E0B77D] hover:bg-[#2C231B] transition-colors cursor-pointer"
+                    title={story.cover_url ? "Replace Cover Image" : "Upload Cover Image"}
+                  >
+                    <Upload className="w-4 h-4" />
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      disabled={uploadingStoryId === story.id}
+                      onChange={(e) => handleStoryCoverUpload(story.id, e)}
+                    />
+                  </label>
+                </div>
 
                 <div className="flex items-center space-x-2">
                   <button

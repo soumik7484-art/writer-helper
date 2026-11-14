@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStory } from '../context/StoryContext';
 import { api } from '../services/api';
-import { Chapter, Memory, Character, PlotHole } from '../types';
+import { Chapter, Memory, Character, PlotHole, Page } from '../types';
 import { Stamp } from '../components/common/Stamp';
 import { sound } from '../services/audioService';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -73,41 +73,77 @@ export const WritingStudio: React.FC = () => {
   const [chapterAlerts, setChapterAlerts] = useState<PlotHole[]>([]);
 
   // Multi-Page Virtual Document System
-  const [pages, setPages] = useState<string[]>(['<p><br></p>']);
+  const [pages, setPages] = useState<Page[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageDirection, setPageDirection] = useState<number>(1);
   const [isPageOverCapacity, setIsPageOverCapacity] = useState<boolean>(false);
   const isTypingRef = useRef<boolean>(false);
 
-  const autosaveTimerRef = useRef<any>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
+  // Dedicated refs for page content cache, race-condition version tracking, and debounce timers
+  const pageContentCacheRef = useRef<{ [pageId: string]: string }>({});
+  const pageVersionRef = useRef<{ [pageId: string]: number }>({});
+  const autosaveTimersRef = useRef<{ [pageId: string]: any }>({});
+  const currentPageRef = useRef<number>(1);
+  currentPageRef.current = currentPage;
+  const pagesRef = useRef<Page[]>(pages);
+  pagesRef.current = pages;
 
-  // Synchronize ContentEditable Editor with Selected Chapter
-  useEffect(() => {
-    if (selectedChapter) {
-      const raw = selectedChapter.content || '';
-      const parsed = parseContentToPages(raw);
-      setPages(parsed);
-      setCurrentPage(1);
-      setPageDirection(1);
-      setIsPageOverCapacity(false);
-      if (editorRef.current) {
-        editorRef.current.innerHTML = parsed[0] || '<p><br></p>';
+  const editorRef = useRef<HTMLDivElement | null>(null);
+
+  const createDefaultPage = (chapterId: string, pageNumber: number, initialContent = '<p><br></p>'): Page => ({
+    id: `page_${chapterId}_${pageNumber}`,
+    chapter_id: chapterId,
+    page_number: pageNumber,
+    content: initialContent,
+    word_count: stripHtml(initialContent).split(/\s+/).filter(Boolean).length,
+    save_status: 'saved',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
+
+  const loadChapterPages = async (chap: Chapter) => {
+    let chapterPages: Page[] = [];
+    try {
+      const fetched = await api.getChapterPages(chap.id);
+      if (fetched && fetched.length > 0) {
+        chapterPages = fetched;
+      }
+    } catch {
+      // Fallback
+    }
+
+    if (chapterPages.length === 0) {
+      if (chap.pages && chap.pages.length > 0) {
+        chapterPages = chap.pages;
+      } else {
+        const raw = chap.content || '';
+        const stringPages = parseContentToPages(raw);
+        chapterPages = stringPages.map((str, idx) => ({
+          id: `page_${chap.id}_${idx + 1}`,
+          chapter_id: chap.id,
+          page_number: idx + 1,
+          content: str || '<p><br></p>',
+          word_count: stripHtml(str).split(/\s+/).filter(Boolean).length,
+          save_status: 'saved',
+          created_at: chap.created_at || new Date().toISOString(),
+          updated_at: chap.updated_at || new Date().toISOString(),
+        }));
       }
     }
-  }, [selectedChapter?.id]);
 
-  // Synchronize ContentEditable on Page Flip / Navigation
-  useEffect(() => {
-    if (editorRef.current && !isTypingRef.current) {
-      const pageHtml = pages[currentPage - 1] || '<p><br></p>';
-      if (editorRef.current.innerHTML !== pageHtml) {
-        editorRef.current.innerHTML = pageHtml;
-      }
-      const isOver = editorRef.current.scrollHeight > 450;
-      setIsPageOverCapacity(isOver);
+    if (chapterPages.length === 0) {
+      chapterPages = [createDefaultPage(chap.id, 1, chap.content || '<p><br></p>')];
     }
-  }, [currentPage]);
+
+    chapterPages.forEach(p => {
+      pageContentCacheRef.current[p.id] = p.content;
+    });
+
+    setPages(chapterPages);
+    setCurrentPage(1);
+    setPageDirection(1);
+    setIsPageOverCapacity(false);
+  };
 
   // Fetch chapters and characters
   const fetchStudioData = async () => {
@@ -147,7 +183,8 @@ export const WritingStudio: React.FC = () => {
     fetchStudioData();
   }, [activeStory]);
 
-  const selectChapter = (chap: Chapter) => {
+  const selectChapter = async (chap: Chapter) => {
+    flushCurrentPage();
     sound.playPaperRustle();
     setSelectedChapter(chap);
     setActiveChapterId(chap.id);
@@ -158,15 +195,7 @@ export const WritingStudio: React.FC = () => {
     setLastSaved('Saved');
     queryContextMemories(stripHtml(chap.content));
 
-    const parsed = parseContentToPages(chap.content || '');
-    setPages(parsed);
-    setCurrentPage(1);
-    setPageDirection(1);
-    setIsPageOverCapacity(false);
-
-    if (editorRef.current) {
-      editorRef.current.innerHTML = parsed[0] || '<p><br></p>';
-    }
+    await loadChapterPages(chap);
   };
 
   // Semantic Memory Retrieval query from current content
@@ -184,24 +213,91 @@ export const WritingStudio: React.FC = () => {
     }
   };
 
-  // Debounced Autosave
-  const handleContentChange = (newContent: string) => {
-    setContent(newContent);
-    setLastSaved('Unsaved Changes...');
+  // Save specific page to API/store with version race-condition guard
+  const saveSpecificPage = async (pageId: string, contentToSave: string, version: number) => {
+    if (!selectedChapter) return;
+    setIsSaving(true);
+    setPages(prev => prev.map(p => p.id === pageId ? { ...p, save_status: 'saving' } : p));
 
-    if (autosaveTimerRef.current) {
-      clearTimeout(autosaveTimerRef.current);
+    try {
+      const words = stripHtml(contentToSave).split(/\s+/).filter(Boolean).length;
+      const updatedPage = await api.updateChapterPage(selectedChapter.id, pageId, {
+        content: contentToSave,
+        word_count: words,
+        save_status: 'saved',
+      });
+
+      // Stale response guard (Test 6): Never overwrite newer user edits with an older response
+      if (version < (pageVersionRef.current[pageId] || 0)) {
+        return;
+      }
+
+      setPages(prev => prev.map(p => p.id === pageId ? { ...p, ...updatedPage, save_status: 'saved' } : p));
+      setLastSaved(`Saved at ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
+    } catch (e: any) {
+      console.error("Save page error:", e);
+      setPages(prev => prev.map(p => p.id === pageId ? { ...p, save_status: 'error' } : p));
+      setLastSaved('Save Error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Synchronous flush of current page content before navigation or save
+  const flushCurrentPage = () => {
+    const activePage = pagesRef.current[currentPageRef.current - 1];
+    if (!activePage) return;
+
+    let currentHtml = editorRef.current && editorRef.current.isConnected
+      ? editorRef.current.innerHTML
+      : pageContentCacheRef.current[activePage.id];
+
+    if (!currentHtml && activePage.content) {
+      currentHtml = activePage.content;
     }
 
-    autosaveTimerRef.current = setTimeout(() => {
-      handleSave(newContent, title, summary, status, false);
-      queryContextMemories(newContent);
-    }, 2500);
+    if (!currentHtml) {
+      currentHtml = '<p><br></p>';
+    }
+
+    // Protection: Never overwrite existing manuscript content with an empty string during transition/unmount
+    if ((currentHtml === '' || currentHtml === '<p><br></p>') && (activePage.content && activePage.content.trim() !== '' && activePage.content !== '<p><br></p>')) {
+      currentHtml = activePage.content;
+    }
+
+    if (autosaveTimersRef.current[activePage.id]) {
+      clearTimeout(autosaveTimersRef.current[activePage.id]);
+      delete autosaveTimersRef.current[activePage.id];
+    }
+
+    pageContentCacheRef.current[activePage.id] = currentHtml;
+    pageVersionRef.current[activePage.id] = (pageVersionRef.current[activePage.id] || 0) + 1;
+    const version = pageVersionRef.current[activePage.id];
+    const words = stripHtml(currentHtml).split(/\s+/).filter(Boolean).length;
+
+    setPages(prev => {
+      const next = [...prev];
+      const idx = currentPageRef.current - 1;
+      if (next[idx]) {
+        next[idx] = {
+          ...next[idx],
+          content: currentHtml,
+          word_count: words,
+          updated_at: new Date().toISOString()
+        };
+      }
+      return next;
+    });
+
+    saveSpecificPage(activePage.id, currentHtml, version);
   };
 
   // Page input handler for ContentEditable
   const handlePageInput = () => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || !editorRef.current.isConnected) return;
+    const activePage = pagesRef.current[currentPageRef.current - 1];
+    if (!activePage) return;
+
     isTypingRef.current = true;
     const currentHtml = editorRef.current.innerHTML;
 
@@ -209,42 +305,74 @@ export const WritingStudio: React.FC = () => {
     const isOver = editorRef.current.scrollHeight > 450;
     setIsPageOverCapacity(isOver);
 
-    // Update current page
-    const updatedPages = [...pages];
-    updatedPages[currentPage - 1] = currentHtml;
+    // Update memory cache and version
+    pageContentCacheRef.current[activePage.id] = currentHtml;
+    pageVersionRef.current[activePage.id] = (pageVersionRef.current[activePage.id] || 0) + 1;
+    const version = pageVersionRef.current[activePage.id];
 
-    // Auto-create next page if on the last page and capacity is exceeded
-    if (isOver && currentPage === updatedPages.length) {
-      updatedPages.push('<p><br></p>');
+    const words = stripHtml(currentHtml).split(/\s+/).filter(Boolean).length;
+
+    setPages(prev => {
+      const next = [...prev];
+      const idx = currentPageRef.current - 1;
+      if (next[idx]) {
+        next[idx] = {
+          ...next[idx],
+          content: currentHtml,
+          word_count: words,
+          save_status: 'unsaved',
+          updated_at: new Date().toISOString()
+        };
+      }
+      return next;
+    });
+
+    setLastSaved('Unsaved Changes...');
+
+    // Debounced autosave
+    if (autosaveTimersRef.current[activePage.id]) {
+      clearTimeout(autosaveTimersRef.current[activePage.id]);
     }
 
-    setPages(updatedPages);
-
-    // Sync continuous document
-    const fullDoc = combinePagesToContent(updatedPages);
-    handleContentChange(fullDoc);
+    const pageIdToSave = activePage.id;
+    autosaveTimersRef.current[activePage.id] = setTimeout(() => {
+      saveSpecificPage(pageIdToSave, currentHtml, version);
+      queryContextMemories(stripHtml(currentHtml));
+    }, 1500);
 
     setTimeout(() => {
       isTypingRef.current = false;
-    }, 150);
+    }, 100);
+  };
+
+  const handlePageBlur = () => {
+    if (!editorRef.current || !editorRef.current.isConnected) return;
+    const currentHtml = editorRef.current.innerHTML;
+    const activePage = pagesRef.current[currentPageRef.current - 1];
+    if (!activePage) return;
+
+    if ((!currentHtml || currentHtml.trim() === '' || currentHtml === '<p><br></p>') && (activePage.content && activePage.content.trim() !== '' && activePage.content !== '<p><br></p>')) {
+      return;
+    }
+
+    pageContentCacheRef.current[activePage.id] = currentHtml;
+    flushCurrentPage();
   };
 
   // Page Navigation Handlers
   const handleNextPage = () => {
+    flushCurrentPage();
     if (currentPage < pages.length) {
       sound.playPaperRustle();
       setPageDirection(1);
       setCurrentPage(prev => prev + 1);
     } else if (currentPage === pages.length && isPageOverCapacity) {
-      sound.playPaperRustle();
-      const updated = [...pages, '<p><br></p>'];
-      setPages(updated);
-      setPageDirection(1);
-      setCurrentPage(updated.length);
+      handleAddNewPage();
     }
   };
 
   const handlePrevPage = () => {
+    flushCurrentPage();
     if (currentPage > 1) {
       sound.playPaperRustle();
       setPageDirection(-1);
@@ -254,18 +382,36 @@ export const WritingStudio: React.FC = () => {
 
   const handleJumpToPage = (pageNum: number) => {
     if (pageNum === currentPage || pageNum < 1 || pageNum > pages.length) return;
+    flushCurrentPage();
     sound.playPaperRustle();
     setPageDirection(pageNum > currentPage ? 1 : -1);
     setCurrentPage(pageNum);
   };
 
-  const handleAddNewPage = () => {
+  const handleAddNewPage = async () => {
+    flushCurrentPage();
     sound.playPaperRustle();
-    const updated = [...pages, '<p><br></p>'];
-    setPages(updated);
-    setPageDirection(1);
-    setCurrentPage(updated.length);
-    addToast("New Folio Bound", `Folio ${updated.length} added to the manuscript.`, "info");
+
+    if (!selectedChapter) return;
+    const nextNum = pages.length + 1;
+    try {
+      const created = await api.createChapterPage(selectedChapter.id, {
+        page_number: nextNum,
+        content: '<p><br></p>',
+      });
+      pageContentCacheRef.current[created.id] = created.content;
+      setPages(prev => [...prev, created]);
+      setPageDirection(1);
+      setCurrentPage(nextNum);
+      addToast("New Folio Bound", `Folio ${nextNum} added to the manuscript.`, "info");
+    } catch {
+      const fallback = createDefaultPage(selectedChapter.id, nextNum, '<p><br></p>');
+      pageContentCacheRef.current[fallback.id] = fallback.content;
+      setPages(prev => [...prev, fallback]);
+      setPageDirection(1);
+      setCurrentPage(nextNum);
+      addToast("New Folio Bound", `Folio ${nextNum} added to the manuscript.`, "info");
+    }
   };
 
   const handleEditorKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -273,13 +419,7 @@ export const WritingStudio: React.FC = () => {
       if (e.key === 'Enter') {
         // Ctrl+Enter: Insert Page Break
         e.preventDefault();
-        sound.playPaperRustle();
-        const updated = [...pages];
-        updated.splice(currentPage, 0, '<p><br></p>');
-        setPages(updated);
-        setPageDirection(1);
-        setCurrentPage(prev => prev + 1);
-        addToast("Page Break", `Folio ${currentPage + 1} opened.`, "info");
+        handleAddNewPage();
         return;
       }
       if (e.key === 'b' || e.key === 'B') {
@@ -322,20 +462,30 @@ export const WritingStudio: React.FC = () => {
   };
 
   const handleSave = async (
-    textToSave: string = content,
+    textToSave?: string,
     titleToSave: string = title,
     summaryToSave: string = summary,
     statusToSave: any = status,
     showToast: boolean = true
   ) => {
     if (!selectedChapter) return;
+    flushCurrentPage();
+
     try {
       setIsSaving(true);
+      const combined = pagesRef.current
+        .map(p => pageContentCacheRef.current[p.id] ?? p.content)
+        .filter(c => c && c.trim() !== '<p><br></p>')
+        .join('<!-- story-page-break -->');
+
+      const fullContent = textToSave !== undefined ? textToSave : (combined || pagesRef.current[0]?.content || '');
+
       const updated = await api.updateChapter(selectedChapter.id, {
         title: titleToSave,
-        content: textToSave,
+        content: fullContent,
         summary: summaryToSave,
         status: statusToSave,
+        pages: pagesRef.current
       });
 
       setSelectedChapter(updated);
@@ -410,22 +560,36 @@ export const WritingStudio: React.FC = () => {
   };
 
   const handleAppendAiText = () => {
-    if (!aiOutput) return;
+    if (!aiOutput || !selectedChapter) return;
     const formattedAi = aiOutput.split('\n\n').map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
-    const existingDoc = combinePagesToContent(pages);
-    const updatedDoc = existingDoc && existingDoc.trim() !== '<p><br></p>'
-      ? `${existingDoc}<p><br></p>${formattedAi}`
+    const activePage = pages[currentPage - 1];
+    if (!activePage) return;
+
+    const existingPageContent = pageContentCacheRef.current[activePage.id] ?? activePage.content ?? '';
+    const updatedPageContent = existingPageContent && existingPageContent.trim() !== '<p><br></p>'
+      ? `${existingPageContent}<p><br></p>${formattedAi}`
       : formattedAi;
 
-    const repaginated = parseContentToPages(updatedDoc);
-    setPages(repaginated);
-    handleContentChange(updatedDoc);
-    handleSave(updatedDoc, title, summary, status, true);
+    pageContentCacheRef.current[activePage.id] = updatedPageContent;
+    if (editorRef.current) {
+      editorRef.current.innerHTML = updatedPageContent;
+    }
+
+    const words = stripHtml(updatedPageContent).split(/\s+/).filter(Boolean).length;
+    setPages(prev => prev.map(p => p.id === activePage.id ? { ...p, content: updatedPageContent, word_count: words, save_status: 'unsaved' } : p));
+    pageVersionRef.current[activePage.id] = (pageVersionRef.current[activePage.id] || 0) + 1;
+    saveSpecificPage(activePage.id, updatedPageContent, pageVersionRef.current[activePage.id]);
     setAiOutput('');
-    addToast("AI Prose Integrated", `Flowed across ${repaginated.length} virtual folios.`, "success");
+    addToast("AI Prose Integrated", `Appended to Folio ${currentPage}.`, "success");
   };
 
-  const wordCount = stripHtml(combinePagesToContent(pages) || content).split(/\s+/).filter(Boolean).length;
+  const currentPageData = pages[currentPage - 1];
+  const activeFolioContent = (currentPageData ? pageContentCacheRef.current[currentPageData.id] : undefined) ?? currentPageData?.content ?? '<p><br></p>';
+  const totalWordCount = pages.reduce((sum, p) => {
+    const raw = pageContentCacheRef.current[p.id] ?? p.content;
+    return sum + stripHtml(raw).split(/\s+/).filter(Boolean).length;
+  }, 0);
+  const wordCount = totalWordCount;
   const filteredChapters = chapters.filter(c =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     `chapter ${c.chapter_number}`.includes(searchQuery.toLowerCase())
@@ -593,7 +757,7 @@ export const WritingStudio: React.FC = () => {
             {/* Realistic 3D Flipping Parchment Leaf */}
             <AnimatePresence mode="wait" custom={pageDirection}>
               <motion.div
-                key={currentPage}
+                key={currentPageData?.id || `folio-${currentPage}`}
                 custom={pageDirection}
                 variants={{
                   enter: (dir: number) => ({
@@ -683,12 +847,22 @@ export const WritingStudio: React.FC = () => {
                 {/* Virtual Page ContentEditable Prose Area (Fixed Height) */}
                 <div className="relative flex-1 overflow-hidden">
                   <div
-                    ref={editorRef}
+                    ref={(el) => {
+                      editorRef.current = el;
+                      if (el && currentPageData) {
+                        const targetHtml = pageContentCacheRef.current[currentPageData.id] ?? currentPageData.content ?? '<p><br></p>';
+                        if (el.innerHTML !== targetHtml) {
+                          el.innerHTML = targetHtml;
+                        }
+                        setIsPageOverCapacity(el.scrollHeight > 450);
+                      }
+                    }}
                     contentEditable
                     suppressContentEditableWarning
+                    dangerouslySetInnerHTML={{ __html: activeFolioContent }}
                     data-placeholder="Begin penning the narrative on this folio... Describe the environment, characters, tensions, and unfolding secrets..."
                     onInput={handlePageInput}
-                    onBlur={handlePageInput}
+                    onBlur={handlePageBlur}
                     onKeyDown={handleEditorKeyDown}
                     className="w-full h-[450px] max-h-[450px] overflow-y-auto bg-transparent font-serif text-base sm:text-lg md:text-[19px] text-[#221811] leading-relaxed focus:outline-none prose max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-[#8C765C] empty:before:italic empty:before:pointer-events-none pl-3 sm:pl-4 pr-1"
                     style={{
@@ -707,11 +881,11 @@ export const WritingStudio: React.FC = () => {
 
                 {/* Page Footer */}
                 <div className="pt-3 border-t border-[#524131]/30 flex items-center justify-between font-mono text-xs sm:text-sm text-[#544131] shrink-0 relative z-20">
-                  <span>Words: <strong className="font-bold">{wordCount}</strong></span>
+                  <span>Words: <strong className="font-bold">{currentPageData?.word_count || 0}</strong> (Total: {totalWordCount})</span>
                   <span className="font-serif italic text-sm tracking-wider opacity-80">
                     — Folio {currentPage} of {pages.length} —
                   </span>
-                  <span>{lastSaved}</span>
+                  <span>{currentPageData?.save_status === 'saving' ? 'Saving...' : currentPageData?.save_status === 'unsaved' ? 'Unsaved Changes...' : currentPageData?.save_status === 'error' ? 'Save Error' : lastSaved}</span>
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -743,12 +917,12 @@ export const WritingStudio: React.FC = () => {
 
               {/* Clickable Page Pills */}
               <div className="hidden md:flex items-center space-x-1 ml-2">
-                {pages.map((_, idx) => {
+                {pages.map((p, idx) => {
                   const pageNum = idx + 1;
                   const isActive = pageNum === currentPage;
                   return (
                     <button
-                      key={pageNum}
+                      key={p.id || pageNum}
                       onClick={() => handleJumpToPage(pageNum)}
                       className={`w-6 h-6 rounded text-xs font-mono font-bold transition-all ${
                         isActive
